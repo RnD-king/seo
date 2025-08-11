@@ -7,8 +7,9 @@ class Motion:
     FORWARD = 1 
     TURN_LEFT = 2
     TURN_RIGHT = 3
-    STOP = 4
+    Pick = 4
     RECOVERY = 5
+    STOP = 6
 
 class MotionDecision(Node):
     def __init__(self):
@@ -98,6 +99,10 @@ class MotionDecision(Node):
         elif self.res == 3:
             motion_msg.command = Motion.TURN_RIGHT
             motion_msg.detail = "Test: Moving Turn Right"
+
+        elif self.res == 4:
+            motion_msg.command = Motion.Pick
+            motion_msg.detail = "Test: Pick Motion"
 
         # 명령 보내면 다시 false로 변환
         self.motion_end_detect = False          

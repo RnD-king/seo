@@ -61,7 +61,8 @@ public:
 
 
     // 모션 제어 함수들
-    virtual void SelectMotion();            
+    virtual void SelectMotion();
+    virtual void PickMotion();    
     virtual void Write_All_Theta();           
     void callbackThread();
     void Set();

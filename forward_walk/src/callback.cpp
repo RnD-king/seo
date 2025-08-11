@@ -45,6 +45,8 @@ Callback::Callback(Trajectory *trajectoryPtr, IK_Function *IK_Ptr, Dxl *dxlPtr, 
     pick_Ptr->Ref_RA_th = MatrixXd::Zero(4, 675);
     pick_Ptr->Ref_LA_th = MatrixXd::Zero(4, 675);
     pick_Ptr->Ref_NC_th = MatrixXd::Zero(2, 675);
+
+    
     emergency = 1;
     indext = 1;
     go = 0;
@@ -53,16 +55,6 @@ Callback::Callback(Trajectory *trajectoryPtr, IK_Function *IK_Ptr, Dxl *dxlPtr, 
     RCLCPP_INFO(this->get_logger(), "Callback activated");
 }
 
-
-// void Callback::SetMode(const std_msgs::msg::Bool::SharedPtr set)
-// {
-//     RCLCPP_INFO(this->get_logger(), "SetMode called with data: %d", set->data);
-//     if (set->data)
-//     {
-
-
-//     }
-// }
 
 
 void Callback::Set()
@@ -106,8 +98,6 @@ void Callback::ImuCallback(const sensor_msgs::msg::Imu::SharedPtr msg)
         zmp_meas_ = z_c * (acc_x_ / acc_z_);
     }
 }
-
-
 
 
 // ros2 topic pub /START std_msgs/msg/Bool "data: true" -1
@@ -156,7 +146,7 @@ void Callback::SelectMotion()
     {
         re = 1;
         indext = 0;
-        indext = 0;
+
     
         trajectoryPtr->Change_Freq(2);
 
@@ -166,8 +156,26 @@ void Callback::SelectMotion()
         IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
         IK_Ptr->Change_Angle_Compensation(3, 3, 2, 2, 3, 2, 2, -2);   
         IK_Ptr->Set_Angle_Compensation(67);
+        // trajectoryPtr->Picking_Motion(300, 150, 0.165);
     }
 }
+
+void Callback::PickMotion()
+{
+    if(re == 0)
+    {
+        re = 1;
+        indext = 0;
+        indext = 0;
+    
+        trajectoryPtr->Change_Freq(2);
+
+
+        IK_Ptr->Change_Com_Height(30);
+        trajectoryPtr->Picking_Motion(300, 150, 0.165);
+    }
+}
+
 
 // 동작 중인지 판별
 bool Callback::IsMotionFinish()
@@ -242,7 +250,7 @@ void Callback::Write_All_Theta()
 
     // ZMP 보정값 적용
     // double zmp_meas = z_c * (acc_x_ / acc_z_);
-    double zmp_ref = trajectoryPtr->GetZmpRef()[indext];
+    // double zmp_ref = trajectoryPtr->GetZmpRef()[indext];
     // double zmp_err = zmp_ref - zmp_meas_;
     // double theta_correction = kp_zmp_ * zmp_err;
     // int hip_pitch_L = 8; //실제 모터 7번

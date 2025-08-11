@@ -83,7 +83,7 @@ private:
 
     void MotionCallback(const robot_msgs::msg::MotionCommand::SharedPtr msg)        
     {
-        if (msg->command == 1 || msg->command == 2 || msg->command == 3)
+        if (msg->command == 1)
         {
             if (motion_in_progress_) {
                 RCLCPP_WARN(this->get_logger(), "동작 중: 명령 무시됨");
@@ -95,7 +95,45 @@ private:
             motion_loop_timer_->reset();
         }
 
-        else if (msg->command == 4) //STOP
+        if (msg->command == 2 || msg->command == 3)
+        {
+            if (motion_in_progress_) {
+                RCLCPP_WARN(this->get_logger(), "동작 중: 명령 무시됨");
+                return;
+            }
+
+            callback_->SelectMotion();
+            motion_in_progress_ = true;
+            motion_loop_timer_->reset();
+        }
+
+        else if (msg->command == 4) //Pick
+        {
+            if (motion_in_progress_) {
+                RCLCPP_WARN(this->get_logger(), "동작 중: 명령 무시됨");
+                return;
+            }
+
+            callback_->PickMotion();
+            motion_in_progress_ = true;
+            motion_loop_timer_->reset();
+        }
+
+        else if (msg->command == 5) //RECOVERY 
+        {
+            RCLCPP_INFO(this->get_logger(), "[RECOVERY] 명령 수신");
+
+            motion_in_progress_ = false;
+            motion_loop_timer_->cancel();
+
+            callback_->Set();
+            dxl_->MoveToTargetSmoothCos(callback_->All_Theta, 150, 10);
+
+            //recovery 모션 함수
+            //RecoveryMotion();
+        }
+
+        else if (msg->command == 6) //STOP
         {
             RCLCPP_INFO(this->get_logger(), "[STOP] 명령 수신");
 
@@ -115,19 +153,6 @@ private:
             RCLCPP_INFO(this->get_logger(), "[MotionEnd] 모션 종료 메시지 전송");
         }
 
-        else if (msg->command == 5) //RECOVERY 
-        {
-            RCLCPP_INFO(this->get_logger(), "[RECOVERY] 명령 수신");
-
-            motion_in_progress_ = false;
-            motion_loop_timer_->cancel();
-
-            callback_->Set();
-            dxl_->MoveToTargetSmoothCos(callback_->All_Theta, 150, 10);
-
-            //recovery 모션 함수
-            //RecoveryMotion();
-        }
 
         else
         {
