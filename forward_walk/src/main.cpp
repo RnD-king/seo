@@ -95,17 +95,17 @@ private:
             motion_loop_timer_->reset();
         }
 
-        if (msg->command == 2 || msg->command == 3)
-        {
-            if (motion_in_progress_) {
-                RCLCPP_WARN(this->get_logger(), "동작 중: 명령 무시됨");
-                return;
-            }
+        // if (msg->command == 2 || msg->command == 3)
+        // {
+        //     if (motion_in_progress_) {
+        //         RCLCPP_WARN(this->get_logger(), "동작 중: 명령 무시됨");
+        //         return;
+        //     }
 
-            callback_->SelectMotion();
-            motion_in_progress_ = true;
-            motion_loop_timer_->reset();
-        }
+        //     callback_->SelectMotion();
+        //     motion_in_progress_ = true;
+        //     motion_loop_timer_->reset();
+        // }
 
         else if (msg->command == 4) //Pick
         {
