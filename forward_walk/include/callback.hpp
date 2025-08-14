@@ -58,11 +58,13 @@ public:
 
     int GetIndexT() const { return indext; }
 
+    double startRL_st[6] = { 0.0 };
+    double startLL_st[6] = { 0.0 };
+
 
 
     // 모션 제어 함수들
-    virtual void SelectMotion();
-    virtual void PickMotion();    
+    virtual void SelectMotion(int go); 
     virtual void Write_All_Theta();           
     void callbackThread();
     void Set();
@@ -77,7 +79,9 @@ public:
     int go = 0;
     int re = 0;
     int emergency = 99;
-    int indext = 0;                        
+    int indext = 0;
+    int mode = 0;                   
+    int index_angle = 0;
 
     double step = 0;
     double RL_th2 = 0, LL_th2 = 0;
@@ -89,6 +93,11 @@ public:
     VectorXd initial_theta = VectorXd::Zero(NUMBER_OF_DYNAMIXELS);
     bool initial_theta_saved = false;
 
+
+    double walkfreq = 1.48114;
+    double walktime = 2 / walkfreq;
+    int freq = 100;
+    int walktime_n = walktime * freq;
 
 
 

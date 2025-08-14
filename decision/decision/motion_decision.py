@@ -7,9 +7,12 @@ class Motion:
     FORWARD = 1 
     TURN_LEFT = 2
     TURN_RIGHT = 3
-    Pick = 4
-    RECOVERY = 5
-    STOP = 6
+    PICK = 4
+    STEP = 5
+    HURDLE = 6
+    SHOOT = 7
+    RECOVERY = 77
+    STOP = 99
 
 class MotionDecision(Node):
     def __init__(self):
@@ -59,6 +62,7 @@ class MotionDecision(Node):
     def LineResultCallback(self, line_msg: LineResult):
         self.get_logger().info(f"[LineResult] res: {line_msg.res}, angle: {line_msg.angle}")
         self.res = line_msg.res
+        self.angle = line_msg.angle
 
         if not self.first_motion_triggered and self.res != 0:
             self.motion_end_detect = True
@@ -99,10 +103,30 @@ class MotionDecision(Node):
         elif self.res == 3:
             motion_msg.command = Motion.TURN_RIGHT
             motion_msg.detail = "Test: Moving Turn Right"
+        
+        elif self.res == 4:   # 징검다리
+            motion_msg.command = Motion.STEP
+            motion_msg.detail = "Test: Step Motion"
 
-        elif self.res == 4:
-            motion_msg.command = Motion.Pick
+        elif self.res == 5:
+            motion_msg.command = Motion.PICK
             motion_msg.detail = "Test: Pick Motion"
+
+        elif self.res == 6:
+            motion_msg.command = Motion.HURDLE
+            motion_msg.detail = "Test: Hurdle Motion"
+
+        elif self.res == 7:
+            motion_msg.command = Motion.SHOOT
+            motion_msg.detail = "Test: Shoot Motion"
+
+        elif self.res == 77:
+            motion_msg.command = Motion.RECOVERY
+            motion_msg.detail = "Test: RECOVERY Motion"
+
+        elif self.res == 99:
+            motion_msg.command = Motion.STOP
+            motion_msg.detail = "Test: STOP Motion"
 
         # 명령 보내면 다시 false로 변환
         self.motion_end_detect = False          

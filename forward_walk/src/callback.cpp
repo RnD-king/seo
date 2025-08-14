@@ -140,42 +140,134 @@ void Callback::callbackThread()
     }
 }
 
-void Callback::SelectMotion()
+void Callback::SelectMotion(int go)
 {
+    RCLCPP_WARN(this->get_logger(), "[SelectMotion] called: go=%d, re=%d", go, re);
     if(re == 0)
     {
-        re = 1;
-        indext = 0;
+        if(go == 0)
+        {
+            startRL_st[0] = 0;
+            startRL_st[1] = 0.001941;
+            startRL_st[2] = 0.122416;
+            startRL_st[3] = 0.196013;
+            startRL_st[4] = -0.073595;//1.148133;
+            startRL_st[5] = 0.001941;
+
+            startLL_st[0] = 0;
+            startLL_st[1] = 0.001941;
+            startLL_st[2] = -0.122416;
+            startLL_st[3] = -0.196013;
+            startLL_st[4] = 0.073595;//-1.148133;
+            startLL_st[5] = 0.001941;
+
+            // startRL_st[6] = { 0.0, 0.001941, 0.122416, 0.196013, 1.148133, 0.001941 };
+            // startLL_st[6] = { 0.0, 0.001941, -0.122416, -0.196013, -1.148133, 0.001941 };
+        }
+        if(go == 1)//걷기
+        {
+            re = 1;
+            indext = 0;
+
+
+            trajectoryPtr->Change_Freq(2);
+            // mode = Motion_Index::Step_in_place;
+            IK_Ptr->Change_Com_Height(30);
+            trajectoryPtr->Freq_Change_Straight(0.05, 0.2, 0.05, 1);
+            IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
+            IK_Ptr->Change_Angle_Compensation(3, 3, 2, 2, 3, 2, 2, -2);   
+            IK_Ptr->Set_Angle_Compensation(67);
+        }
+
+        else if(go == 2)//우회전
+        {
+            re = 1;
+            indext = 0;
+
+
+            trajectoryPtr->Change_Freq(2);
+            // mode = Motion_Index::Step_in_place;
+            IK_Ptr->Change_Com_Height(30);
+            // trajectoryPtr->Freq_Change_Straight(0.05, 0.2, 0.05, 1);
+            // IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
+            // IK_Ptr->Change_Angle_Compensation(3, 3, 2, 2, 3, 2, 2, -2);   
+            // IK_Ptr->Set_Angle_Compensation(67);
+            trajectoryPtr->Step_in_place(0.05, 0.25, 0.025);
+            IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
+            IK_Ptr->Change_Angle_Compensation(2, 2, 0, -2, 2, 2, 0, -2);
+            IK_Ptr->Set_Angle_Compensation(135);
+            RCLCPP_WARN(this->get_logger(), "경로 생성");
+        }
+
+        else if(go == 3)//좌회전
+        {
+            re = 1;
+            indext = 0;
+
+
+            trajectoryPtr->Change_Freq(2);
+            // mode = Motion_Index::Step_in_place;
+            IK_Ptr->Change_Com_Height(30);
+            // trajectoryPtr->Freq_Change_Straight(0.05, 0.2, 0.05, 1);
+            // IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
+            // IK_Ptr->Change_Angle_Compensation(3, 3, 2, 2, 3, 2, 2, -2);   
+            // IK_Ptr->Set_Angle_Compensation(67);
+            trajectoryPtr->Step_in_place(0.05, 0.25, 0.025);
+            IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
+            IK_Ptr->Change_Angle_Compensation(2, 2, 0, -2, 2, 2, 0, -2);
+            IK_Ptr->Set_Angle_Compensation(135);
+            RCLCPP_WARN(this->get_logger(), "경로 생성");
+        }
+
+        else if(go == 5)//PickMotion
+        {
+            re = 1;
+            indext = 0;
+        
+            trajectoryPtr->Change_Freq(2);
+
+
+            IK_Ptr->Change_Com_Height(30);
+            trajectoryPtr->Picking_Motion(300, 150, 0.165);
+        }
+        
+        else if(go == 6)//Huddle 1
+        {
+            re = 1;
+            indext = 0;
+
+
+
+
+            trajectoryPtr->Change_Freq(2);
+            // mode = Motion_Index::Huddle;
+            IK_Ptr->Change_Com_Height(30);
+            trajectoryPtr->Huddle_Motion(0.22, 0.14, 0.05);
+            IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
+            IK_Ptr->Change_Angle_Compensation(6.5, 3.5, 0, 3.5, 6.5, 3.5, 0, -3.5);
+            IK_Ptr->Set_Angle_Compensation(135);
+        }
+
+        // else if(go == 7)//Shoot
+        // {
+        //     re = 1;
+        //     indext = 0;
+
+
+        // }
+
+        // else if(go == 77)//RECOVERY
+        // {
+        //     re = 1;
+        //     indext = 0;
+
+
+        // }
+
+    }
 
     
-        trajectoryPtr->Change_Freq(2);
-
-
-        IK_Ptr->Change_Com_Height(30);
-        trajectoryPtr->Freq_Change_Straight(0.05, 0.2, 0.05, 1);
-        IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
-        IK_Ptr->Change_Angle_Compensation(3, 3, 2, 2, 3, 2, 2, -2);   
-        IK_Ptr->Set_Angle_Compensation(67);
-        // trajectoryPtr->Picking_Motion(300, 150, 0.165);
-    }
 }
-
-void Callback::PickMotion()
-{
-    if(re == 0)
-    {
-        re = 1;
-        indext = 0;
-        indext = 0;
-    
-        trajectoryPtr->Change_Freq(2);
-
-
-        IK_Ptr->Change_Com_Height(30);
-        trajectoryPtr->Picking_Motion(300, 150, 0.165);
-    }
-}
-
 
 // 동작 중인지 판별
 bool Callback::IsMotionFinish()
@@ -192,63 +284,100 @@ void Callback::ResetMotion()
 }
 
 
-
 void Callback::Write_All_Theta()
 {
-    // RCLCPP_INFO(rclcpp::get_logger("Callback"), "[Write_All_Theta] 호출됨");
-    RCLCPP_INFO(this->get_logger(), "initial_theta_saved 상태: %s", initial_theta_saved ? "true" : "false");
-
-
     if (emergency == 0)
     {
-
-        // RCLCPP_INFO(rclcpp::get_logger("Callback"), "emergency == 0 OK");
-
-        RCLCPP_INFO(rclcpp::get_logger("Callback"), "[Write_All_Theta] indext = %d / step_n = %ld", indext, trajectoryPtr->Ref_RL_x.cols());
-
-        if (go == 1)
+        if(re == 1)
         {
-            // if (indext < trajectoryPtr->Ref_RL_x.cols())
+            RCLCPP_INFO(rclcpp::get_logger("Callback"), "[Write_All_Theta] indext = %d / step_n = %ld", indext, trajectoryPtr->Ref_RL_x.cols());
+            
+            if (go == 1) //걷기
+            {
+                IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
+                IK_Ptr->Fast_Angle_Compensation(indext);
+            }
+
+            else if (go == 2)//Step_in_place 우회전
+            {
+                
+                IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
+                IK_Ptr->Angle_Compensation(indext, trajectoryPtr->Ref_RL_x.cols());
+                std::cout << "indext" << indext << std::endl;
+                if(mode > 2 && indext>=67 && indext <=337)
+                {
+                    IK_Ptr->RL_th[0] = -(trajectoryPtr->Turn_Trajectory(index_angle));
+                    step = (IK_Ptr->RL_th[0])/2;
+                    index_angle += 1;
+                    std::cout << "index_angle" << index_angle << std::endl;
+                    if (index_angle > walktime_n - 1)
+                    {
+                        index_angle = 0;
+                    }
+                }
+            }
+
+            else if (go == 3)//Step_in_place 좌회전
+            {
+                
+                IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
+                IK_Ptr->Angle_Compensation(indext, trajectoryPtr->Ref_RL_x.cols());
+                std::cout << "indext" << indext << std::endl;
+                if(mode > 2 && mode <5  && indext > 135 && indext <= 270)
+                {
+                    IK_Ptr->LL_th[0] = trajectoryPtr->Turn_Trajectory(index_angle);
+                    step = (IK_Ptr->LL_th[0])/2;
+                    index_angle = index_angle + 1;
+                    std::cout << "index_angle" << index_angle << std::endl;
+                    if (index_angle > walktime_n - 1)
+                    {
+                        index_angle = 0; 
+                    }
+                }
+
+            }
+
+            else if (go == 5) // Pick
+            {
+                IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
+                IK_Ptr->Fast_Angle_Compensation(indext);
+            }
+
+
+            else if(go == 6)//Huddle 1
+            {
+                IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
+                IK_Ptr->Angle_Compensation_Huddle(indext);
+            }
+
+            // else if(go == 7)//Shoot
             // {
-                // RCLCPP_INFO(rclcpp::get_logger("Callback"), "go == 1 → IK 실행");
-            IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
-            IK_Ptr->Fast_Angle_Compensation(indext);
+            //     IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
+            //     IK_Ptr->Angle_Compensation_Huddle(indext);
             // }
-            // else
+
+            // else if(go == 77)//RECOVERY
             // {
-            //     RCLCPP_WARN(this->get_logger(), "indext(%d) >= cols(%ld)", indext, trajectoryPtr->Ref_RL_x.cols());
-            //     return;
+            //     IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
+            //     IK_Ptr->Angle_Compensation_Huddle(indext);
             // }
-        }
-        else
-        {
-            RCLCPP_WARN(rclcpp::get_logger("Callback"), "go != 1 → IK 실행 안 됨");
-        }
-        
-        // if (indext == 0 or indext == trajectoryPtr->Ref_RL_x.cols()){
-        //     for (int i = 0; i < All_Theta.size(); ++i)
-        //     {
-        //         RCLCPP_INFO(this->get_logger(), "All_Theta[%d] = %f", i, All_Theta[i]);
-        //     }
-        // }
 
-        indext += 1;
-
-        if (indext >= trajectoryPtr->Ref_RL_x.cols() && indext != 0)
-        {
-            // RCLCPP_INFO(rclcpp::get_logger("Callback"), "indext 초과 → indext = %d, step_n = %ld", indext, trajectoryPtr->Ref_RL_x.cols());
-            // indext -= 1;
-            re = 0;
         }
 
     }
 
-    else
+    indext += 1;
+
+    if (indext >= trajectoryPtr->Ref_RL_x.cols() && indext != 0)
     {
-        RCLCPP_WARN(rclcpp::get_logger("Callback"), "emergency != 0 → 아무것도 안 함");
+
+        re = 0;
+        mode += 1;
+
+        
     }
 
-    // ZMP 보정값 적용
+    //     // ZMP 보정값 적용
     // double zmp_meas = z_c * (acc_x_ / acc_z_);
     // double zmp_ref = trajectoryPtr->GetZmpRef()[indext];
     // double zmp_err = zmp_ref - zmp_meas_;
@@ -265,19 +394,21 @@ void Callback::Write_All_Theta()
 
     
 
+
     // All_Theta 계산 및 저장
-    All_Theta[0] = -IK_Ptr->RL_th[0];
-    All_Theta[1] = IK_Ptr->RL_th[1] - RL_th1 * DEG2RAD - 3 * DEG2RAD;
-    All_Theta[2] = IK_Ptr->RL_th[2] - RL_th2 * DEG2RAD - 17 * DEG2RAD;
-    All_Theta[3] = -IK_Ptr->RL_th[3] + 40 * DEG2RAD;
-    All_Theta[4] = -IK_Ptr->RL_th[4] + 24.5 * DEG2RAD;
-    All_Theta[5] = -IK_Ptr->RL_th[5] + SR * DEG2RAD - 2 * DEG2RAD;
-    All_Theta[6] = -IK_Ptr->LL_th[0];
-    All_Theta[7] = IK_Ptr->LL_th[1] + LL_th1 * DEG2RAD + 2 * DEG2RAD;
-    All_Theta[8] = -IK_Ptr->LL_th[2] + LL_th2 * DEG2RAD + 17 * DEG2RAD;
-    All_Theta[9] = IK_Ptr->LL_th[3] - 40 * DEG2RAD;
-    All_Theta[10] = IK_Ptr->LL_th[4] - HS * DEG2RAD - 21.22 * DEG2RAD;
-    All_Theta[11] = -IK_Ptr->LL_th[5] + SR * DEG2RAD;
+    All_Theta[0] = -IK_Ptr->RL_th[0] +startRL_st[0];
+    All_Theta[1] = IK_Ptr->RL_th[1] +startRL_st[1] -RL_th1 * DEG2RAD - 3 * DEG2RAD;
+    All_Theta[2] = IK_Ptr->RL_th[2] +startRL_st[2] -RL_th2 * DEG2RAD - 17 * DEG2RAD; //10.74 right
+    All_Theta[3] = -IK_Ptr->RL_th[3] +startRL_st[3] + 40 * DEG2RAD; //38.34 * DEG2RAD;   
+    All_Theta[4] = -IK_Ptr->RL_th[4] +startRL_st[4] + 24.22 * DEG2RAD;
+    All_Theta[5] = -IK_Ptr->RL_th[5] +startRL_st[5] - 2* DEG2RAD;
+
+    All_Theta[6] = -IK_Ptr->LL_th[0] +startLL_st[0];
+    All_Theta[7] = IK_Ptr->LL_th[1] +startLL_st[1] +LL_th1 * DEG2RAD + 2 * DEG2RAD;
+    All_Theta[8] = -IK_Ptr->LL_th[2] +startLL_st[2] +LL_th2 * DEG2RAD + 17 * DEG2RAD; //left
+    All_Theta[9] = IK_Ptr->LL_th[3] +startLL_st[3] - 40 * DEG2RAD; //40.34 * DEG2RAD;  
+    All_Theta[10] = IK_Ptr->LL_th[4] +startLL_st[4] - HS * DEG2RAD - 21.22 * DEG2RAD;
+    All_Theta[11] = -IK_Ptr->LL_th[5] +startLL_st[5] - 2 * DEG2RAD;
 
     // upper_body
     All_Theta[12] = pick_Ptr->WT_th[0] + step + 0 * DEG2RAD;  // waist
@@ -292,11 +423,18 @@ void Callback::Write_All_Theta()
     All_Theta[21] = pick_Ptr->NC_th[0] + 0 * DEG2RAD; // neck_RL
     All_Theta[22] = pick_Ptr->NC_th[1] + 6 * DEG2RAD; // neck_UD
 
-    // [1] 첫 자세 저장
+
+        // [1] 첫 자세 저장
     if (!initial_theta_saved && indext == 1) {
         initial_theta = All_Theta;
         initial_theta_saved = true;
         RCLCPP_INFO(this->get_logger(), "[Write_All_Theta]  초기자세 저장 완료");
+
+        for (int i = 0; i < All_Theta.size(); ++i)
+        {
+            RCLCPP_INFO(this->get_logger(), "All_Theta[%d] = %f", i, All_Theta[i]);
+        }
+        return;
     }
 
     // [2] 마지막 자세 복원
@@ -314,10 +452,150 @@ void Callback::Write_All_Theta()
     }
 
 
-    // // 디버깅 정보 출력
+    if(go == 0)
+    {
+        for (int i = 0; i < 6; i++) 
+        {
+            startRL_st[i] = 0.0;
+            startLL_st[i] = 0.0;
+        }
+    }
+
+    // 디버깅 정보 출력
     // for (int i = 0; i < All_Theta.size(); ++i)
     // {
     //     RCLCPP_INFO(this->get_logger(), "All_Theta[%d] = %f", i, All_Theta[i]);
     // }
-
 }
+
+
+
+
+// void Callback::Write_All_Theta()
+// {
+//     // RCLCPP_INFO(rclcpp::get_logger("Callback"), "[Write_All_Theta] 호출됨");
+//     RCLCPP_INFO(this->get_logger(), "initial_theta_saved 상태: %s", initial_theta_saved ? "true" : "false");
+
+
+//     if (emergency == 0)
+//     {
+
+//         // RCLCPP_INFO(rclcpp::get_logger("Callback"), "emergency == 0 OK");
+
+//         RCLCPP_INFO(rclcpp::get_logger("Callback"), "[Write_All_Theta] indext = %d / step_n = %ld", indext, trajectoryPtr->Ref_RL_x.cols());
+
+//         if (go == 1)
+//         {
+//             // if (indext < trajectoryPtr->Ref_RL_x.cols())
+//             // {
+//                 // RCLCPP_INFO(rclcpp::get_logger("Callback"), "go == 1 → IK 실행");
+//             IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
+//             IK_Ptr->Fast_Angle_Compensation(indext);
+//             // }
+//             // else
+//             // {
+//             //     RCLCPP_WARN(this->get_logger(), "indext(%d) >= cols(%ld)", indext, trajectoryPtr->Ref_RL_x.cols());
+//             //     return;
+//             // }
+//         }
+//         else
+//         {
+//             RCLCPP_WARN(rclcpp::get_logger("Callback"), "go != 1 → IK 실행 안 됨");
+//         }
+        
+//         // if (indext == 0 or indext == trajectoryPtr->Ref_RL_x.cols()){
+//         //     for (int i = 0; i < All_Theta.size(); ++i)
+//         //     {
+//         //         RCLCPP_INFO(this->get_logger(), "All_Theta[%d] = %f", i, All_Theta[i]);
+//         //     }
+//         // }
+
+//         indext += 1;
+
+//         if (indext >= trajectoryPtr->Ref_RL_x.cols() && indext != 0)
+//         {
+//             // RCLCPP_INFO(rclcpp::get_logger("Callback"), "indext 초과 → indext = %d, step_n = %ld", indext, trajectoryPtr->Ref_RL_x.cols());
+//             // indext -= 1;
+//             re = 0;
+//         }
+
+//     }
+
+//     else
+//     {
+//         RCLCPP_WARN(rclcpp::get_logger("Callback"), "emergency != 0 → 아무것도 안 함");
+//     }
+
+//     // ZMP 보정값 적용
+//     // double zmp_meas = z_c * (acc_x_ / acc_z_);
+//     // double zmp_ref = trajectoryPtr->GetZmpRef()[indext];
+//     // double zmp_err = zmp_ref - zmp_meas_;
+//     // double theta_correction = kp_zmp_ * zmp_err;
+//     // int hip_pitch_L = 8; //실제 모터 7번
+//     // int hip_pitch_R = 2; //실제 모터 6번
+//     // All_Theta(hip_pitch_L) += theta_correction;
+//     // All_Theta(hip_pitch_R) += theta_correction;
+//     // int test_motor_id = 3;
+//     // All_Theta(test_motor_id) += theta_correction;
+
+//     // RCLCPP_INFO(this->get_logger(),
+//     // "All_Theta(3) 보정 적용 전후: %.4f → %.4f (보정량: %.4f)", All_Theta(3), theta_correction);
+
+    
+
+//     // All_Theta 계산 및 저장
+//     All_Theta[0] = -IK_Ptr->RL_th[0];
+//     All_Theta[1] = IK_Ptr->RL_th[1] - RL_th1 * DEG2RAD - 3 * DEG2RAD;
+//     All_Theta[2] = IK_Ptr->RL_th[2] - RL_th2 * DEG2RAD - 17 * DEG2RAD;
+//     All_Theta[3] = -IK_Ptr->RL_th[3] + 40 * DEG2RAD;
+//     All_Theta[4] = -IK_Ptr->RL_th[4] + 24.5 * DEG2RAD;
+//     All_Theta[5] = -IK_Ptr->RL_th[5] + SR * DEG2RAD - 2 * DEG2RAD;
+//     All_Theta[6] = -IK_Ptr->LL_th[0];
+//     All_Theta[7] = IK_Ptr->LL_th[1] + LL_th1 * DEG2RAD + 2 * DEG2RAD;
+//     All_Theta[8] = -IK_Ptr->LL_th[2] + LL_th2 * DEG2RAD + 17 * DEG2RAD;
+//     All_Theta[9] = IK_Ptr->LL_th[3] - 40 * DEG2RAD;
+//     All_Theta[10] = IK_Ptr->LL_th[4] - HS * DEG2RAD - 21.22 * DEG2RAD;
+//     All_Theta[11] = -IK_Ptr->LL_th[5] + SR * DEG2RAD;
+
+//     // upper_body
+//     All_Theta[12] = pick_Ptr->WT_th[0] + step + 0 * DEG2RAD;  // waist
+//     All_Theta[13] = pick_Ptr->LA_th[0] + 90 * DEG2RAD; // L_arm
+//     All_Theta[14] = pick_Ptr->RA_th[0] - 90 * DEG2RAD; // R_arm
+//     All_Theta[15] = pick_Ptr->LA_th[1] - 60 * DEG2RAD; // L_arm
+//     All_Theta[16] = pick_Ptr->RA_th[1] + 60 * DEG2RAD; // R_arm
+//     All_Theta[17] = pick_Ptr->LA_th[2] - 90 * DEG2RAD; // L_elbow
+//     All_Theta[18] = pick_Ptr->RA_th[2] + 90 * DEG2RAD; // R_elbow
+//     All_Theta[19] = pick_Ptr->LA_th[3] - 0 * DEG2RAD; // L_hand
+//     All_Theta[20] = pick_Ptr->RA_th[3] + 0 * DEG2RAD; // R_hand
+//     All_Theta[21] = pick_Ptr->NC_th[0] + 0 * DEG2RAD; // neck_RL
+//     All_Theta[22] = pick_Ptr->NC_th[1] + 6 * DEG2RAD; // neck_UD
+
+//     // [1] 첫 자세 저장
+//     if (!initial_theta_saved && indext == 1) {
+//         initial_theta = All_Theta;
+//         initial_theta_saved = true;
+//         RCLCPP_INFO(this->get_logger(), "[Write_All_Theta]  초기자세 저장 완료");
+//     }
+
+//     // [2] 마지막 자세 복원
+//     if (initial_theta_saved && indext == trajectoryPtr->Ref_RL_x.cols()) {
+//         All_Theta = initial_theta;
+//         initial_theta_saved = false;
+//         RCLCPP_INFO(this->get_logger(), "[Write_All_Theta]  마지막 프레임에서 자세 복원됨");
+
+//         // 디버깅 정보 출력
+//         for (int i = 0; i < All_Theta.size(); ++i)
+//         {
+//             RCLCPP_INFO(this->get_logger(), "All_Theta[%d] = %f", i, All_Theta[i]);
+//         }
+//         return;
+//     }
+
+
+//     // // 디버깅 정보 출력
+//     // for (int i = 0; i < All_Theta.size(); ++i)
+//     // {
+//     //     RCLCPP_INFO(this->get_logger(), "All_Theta[%d] = %f", i, All_Theta[i]);
+//     // }
+
+// }
