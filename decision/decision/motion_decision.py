@@ -20,9 +20,9 @@ class MotionDecision(Node):
 
         #초기값 설정
         self.fall_detect = False
-        self.motion_end_detect = False
+        # self.motion_end_detect = False
         self.res = 0
-        self.first_motion_triggered = False
+        # self.first_motion_triggered = False
 
         #라인 결과 subscribe
         self.line_result_subscribe = self.create_subscription( 
@@ -38,20 +38,20 @@ class MotionDecision(Node):
         #원하는 motion publish
         self.motion_publish = self.create_publisher(MotionCommand, '/motion_command', 10)
 
-        #motion 종료 subscribe
-        self.motion_end = self.create_subscription(MotionEnd, '/motion_end', self.MotionEndCallback, 10)
+        # #motion 종료 subscribe
+        # self.motion_end = self.create_subscription(MotionEnd, '/motion_end', self.MotionEndCallback, 10)
 
         # 최초 1회만 실행되는 타이머 등록 (1초 뒤 실행), 강제로 motion_end_detect를 True로 변환
-        self.initial_timer = self.create_timer(1.0, self.InitialTrigger)
+    #     self.initial_timer = self.create_timer(1.0, self.InitialTrigger)
 
-    def InitialTrigger(self):
-        if self.res != 0:
-            self.motion_end_detect = True
-            self.get_logger().info("최초 모션 시작 허용됨 → 라인 감지 완료")
-            self.MotionResult()
-            self.initial_timer.cancel()  # 타이머 종료
-        else:
-            self.get_logger().info("라인 미감지 → 모션 시작 대기 중")
+    # def InitialTrigger(self):
+    #     if self.res != 0:
+    #         self.motion_end_detect = True
+    #         self.get_logger().info("최초 모션 시작 허용됨 → 라인 감지 완료")
+    #         self.MotionResult()
+    #         self.initial_timer.cancel()  # 타이머 종료
+    #     else:
+    #         self.get_logger().info("라인 미감지 → 모션 시작 대기 중")
 
 
     def FallResultCallback(self, fall_msg: FallResult):
@@ -63,14 +63,14 @@ class MotionDecision(Node):
         self.get_logger().info(f"[LineResult] res: {line_msg.res}, angle: {line_msg.angle}")
         self.res = line_msg.res
         self.angle = line_msg.angle
-
-        if not self.first_motion_triggered and self.res != 0:
-            self.motion_end_detect = True
-            self.first_motion_triggered = True
-            self.get_logger().info("최초 모션 시작 허용됨 (res 감지됨)")
-
-
+        # if not self.first_motion_triggered and self.res != 0:
+        #   self.motion_end_detect = True
+        #   self.first_motion_triggered = True
+        #   self.get_logger().info("최초 모션 시작 허용됨 (res 감지됨)")
         self.MotionResult()
+
+
+
 
     def MotionEndCallback(self, motion_end_msg: MotionEnd):
         self.get_logger().info(f"[MotionEnd] motion_end: {motion_end_msg.motion_end_detect}")
@@ -81,9 +81,9 @@ class MotionDecision(Node):
     def MotionResult(self):
         self.get_logger().info(f"[MotionResult] res: {self.res}, fall_detect: {self.fall_detect}, motion_end_detect: {self.motion_end_detect}")
         
-        if not self.motion_end_detect:
-            self.get_logger().info("아직 모션 미완료")
-            return
+        # if not self.motion_end_detect:
+        #     self.get_logger().info("아직 모션 미완료")
+        #     return
 
         motion_msg = MotionCommand()
 
@@ -128,8 +128,8 @@ class MotionDecision(Node):
             motion_msg.command = Motion.STOP
             motion_msg.detail = "Test: STOP Motion"
 
-        # 명령 보내면 다시 false로 변환
-        self.motion_end_detect = False          
+        # # 명령 보내면 다시 false로 변환
+        # self.motion_end_detect = False          
 
         self.motion_publish.publish(motion_msg)
         self.get_logger().info(f"Published motion command: {motion_msg.detail}")

@@ -5,7 +5,7 @@
 #include "BRP_Kinematics.hpp"
 #include "NewPattern2.hpp"     // 사용자 정의: 보행 궤적 생성기
 #include "robot_msgs/msg/motion_command.hpp"  //motion command 불러오기
-#include "robot_msgs/msg/motion_end.hpp"  //motion end 불러오기
+// #include "robot_msgs/msg/motion_end.hpp"  //motion end 불러오기
 
 
 #include <chrono>
@@ -61,8 +61,8 @@ public:
             "/motion_command", 10, std::bind(&MainNode::MotionCallback, this, std::placeholders::_1));
 
         
-        //motion_end를 publish
-        motion_end_pub_ = this->create_publisher<robot_msgs::msg::MotionEnd>("/motion_end", 10);
+        // //motion_end를 publish
+        // motion_end_pub_ = this->create_publisher<robot_msgs::msg::MotionEnd>("/motion_end", 10);
 
 
         // 100Hz 루프 타이머 생성 (처음엔 중단 상태)
@@ -75,7 +75,7 @@ public:
 private:
 
 
-    bool motion_in_progress_;                              // 현재 모션 실행 중인지 여부
+    bool motion_in_progress_ = false;                              // 현재 모션 실행 중인지 여부
     rclcpp::TimerBase::SharedPtr motion_loop_timer_;       // 반복 제어용 타이머\
 
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr start_pub_;
@@ -247,12 +247,12 @@ private:
         if (callback_->IsMotionFinish())
         {
 
-            RCLCPP_INFO(this->get_logger(), "[MotionLoop] Motion finished");
-            robot_msgs::msg::MotionEnd motion_end_msg;
-            motion_end_msg.motion_end_detect = true;
+            // RCLCPP_INFO(this->get_logger(), "[MotionLoop] Motion finished");
+            // robot_msgs::msg::MotionEnd motion_end_msg;
+            // motion_end_msg.motion_end_detect = true;
 
-            motion_end_pub_->publish(motion_end_msg);      // /motion_end 퍼블리시
-            RCLCPP_INFO(this->get_logger(), "[MotionEnd] 모션 종료 메시지 전송");
+            // motion_end_pub_->publish(motion_end_msg);      // /motion_end 퍼블리시
+            // RCLCPP_INFO(this->get_logger(), "[MotionEnd] 모션 종료 메시지 전송");
 
             int go = 0;
             motion_in_progress_ = false;                   // 상태 초기화
