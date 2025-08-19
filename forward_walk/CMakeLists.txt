@@ -42,8 +42,25 @@ ament_target_dependencies(main_node
   robot_msgs
 )
 
+# ===== 새 센서 노드 =====
+add_executable(sensor_node
+  src/sensor.cpp
+)
+target_include_directories(sensor_node PUBLIC
+  ${PROJECT_SOURCE_DIR}/include
+  ${EIGEN3_INCLUDE_DIRS}
+)
+ament_target_dependencies(sensor_node
+  rclcpp
+  std_msgs
+  sensor_msgs
+  tf2
+  Eigen3
+)
+
 # 설치 설정
 install(TARGETS main_node
+  sensor_node
   DESTINATION lib/${PROJECT_NAME}
 )
 

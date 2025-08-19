@@ -1,6 +1,7 @@
 #include "callback.hpp"
 #include "sensor_msgs/msg/imu.hpp"  // IMU 메시지 타입 추가
-#include <cmath>  // ZMP 계산용 수학 함수
+#include <cmath>  
+#include "robot_msgs/msg/line_result.hpp"
 
 bool flgflg = 0;
 FILE *Trajectory_all;
@@ -32,6 +33,10 @@ Callback::Callback(Trajectory *trajectoryPtr, IK_Function *IK_Ptr, Dxl *dxlPtr, 
         "/imu/data", 10,
         std::bind(&Callback::ImuCallback, this, std::placeholders::_1));
 
+    line_subscriber_ = this->create_subscription<robot_msgs::msg::LineResult>(
+        "/line_result", 10,
+        std::bind(&Callback::OnLineResult, this, std::placeholders::_1));
+
     trajectoryPtr->Ref_RL_x = MatrixXd::Zero(1, 675);
     trajectoryPtr->Ref_LL_x = MatrixXd::Zero(1, 675);
     trajectoryPtr->Ref_RL_y = -0.06 * MatrixXd::Ones(1, 675);
@@ -59,18 +64,18 @@ Callback::Callback(Trajectory *trajectoryPtr, IK_Function *IK_Ptr, Dxl *dxlPtr, 
 
 void Callback::Set()
 {
-    All_Theta[0] = -IK_Ptr->RL_th[0];
-    All_Theta[1] = IK_Ptr->RL_th[1] - RL_th1 * DEG2RAD - 3 * DEG2RAD;
-    All_Theta[2] = IK_Ptr->RL_th[2] - RL_th2 * DEG2RAD - 17 * DEG2RAD;
-    All_Theta[3] = -IK_Ptr->RL_th[3] + 40 * DEG2RAD;
-    All_Theta[4] = -IK_Ptr->RL_th[4] + 24.5 * DEG2RAD;
-    All_Theta[5] = -IK_Ptr->RL_th[5] + SR * DEG2RAD - 2 * DEG2RAD;
-    All_Theta[6] = -IK_Ptr->LL_th[0];
-    All_Theta[7] = IK_Ptr->LL_th[1] + LL_th1 * DEG2RAD + 2 * DEG2RAD;
-    All_Theta[8] = -IK_Ptr->LL_th[2] + LL_th2 * DEG2RAD + 17 * DEG2RAD;
-    All_Theta[9] = IK_Ptr->LL_th[3] - 40 * DEG2RAD;
-    All_Theta[10] = IK_Ptr->LL_th[4] - HS * DEG2RAD - 21.22 * DEG2RAD;
-    All_Theta[11] = -IK_Ptr->LL_th[5] + SR * DEG2RAD;
+    All_Theta[0] = 0.0;
+    All_Theta[1] = -0.050419;
+    All_Theta[2] = -0.785155;
+    All_Theta[3] = -0.327585;
+    All_Theta[4] = 0.959987;
+    All_Theta[5] = -0.032966;
+    All_Theta[6] = 0.0;
+    All_Theta[7] = 0.036848;
+    All_Theta[8] = 0.785155;
+    All_Theta[9] = 0.327585;
+    All_Theta[10] = -0.907627;
+    All_Theta[11] = -0.032966;
 
     // upper_body
     All_Theta[12] = pick_Ptr->WT_th[0] + step + 0 * DEG2RAD;  // waist
@@ -99,6 +104,28 @@ void Callback::ImuCallback(const sensor_msgs::msg::Imu::SharedPtr msg)
     }
 }
 
+void Callback::OnLineResult(const LineResult::SharedPtr msg)
+{
+    if (!line_turn)
+    {
+        return;
+    }
+
+    constexpr double kStepDeg = 8.0;    // 모션 1회 회전각
+    constexpr double kRoundUp = 6.0;    // 6° 초과면 1회 추가 
+
+    double line_angle_ = msg->angle;  
+    int turncount = static_cast<int>(line_angle_ / kStepDeg);
+    double extra_angle = std::fmod(line_angle_ , kStepDeg);
+
+    if ( extra_angle >= kRoundUp) 
+    {
+        ++turncount;
+    }
+
+    pending_turns.store(turncount, std::memory_order_relaxed);
+    line_turn.store(false, std::memory_order_release); // 원샷 종료
+}
 
 // ros2 topic pub /START std_msgs/msg/Bool "data: true" -1
 
@@ -126,6 +153,20 @@ void Callback::StartMode(const std_msgs::msg::Bool::SharedPtr start)
 
         RCLCPP_INFO(this->get_logger(), "StartMode activated with true data!");
     }
+}
+
+void Callback::TATA()
+{
+    double res_turn_angle = angle;
+
+    if (res_turn_angle != 0)
+    {
+        turn_angle = res_turn_angle * DEG2RAD;
+        trajectoryPtr->Make_turn_trajectory(turn_angle);
+        // index_angle = 0;
+    }
+    // RCLCPP_WARN(this->get_logger(), "TURN_ANGLE : %.2f deg", res_turn_angle);
+    // RCLCPP_INFO(this->get_logger(), "------------------------- TURN_ANGLE ----------------------------");
 }
 
 void Callback::callbackThread()
@@ -168,14 +209,15 @@ void Callback::SelectMotion(int go)
         {
             re = 1;
             indext = 0;
+            angle = 3;
 
 
             trajectoryPtr->Change_Freq(2);
             // mode = Motion_Index::Step_in_place;
             IK_Ptr->Change_Com_Height(30);
-            trajectoryPtr->Freq_Change_Straight(0.05, 0.2, 0.05, 1);
+            trajectoryPtr->Freq_Change_Straight(0.05, 0.4, 0.05, 1);
             IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
-            IK_Ptr->Change_Angle_Compensation(3, 3, 2, 2, 3, 2, 2, -2);   
+            IK_Ptr->Change_Angle_Compensation(2, 2, 0, -2, 2, 2, 0, -2);   
             IK_Ptr->Set_Angle_Compensation(67);
         }
 
@@ -183,15 +225,12 @@ void Callback::SelectMotion(int go)
         {
             re = 1;
             indext = 0;
-
+            angle = 8;
+            line_turn = true;
 
             trajectoryPtr->Change_Freq(2);
             // mode = Motion_Index::Step_in_place;
             IK_Ptr->Change_Com_Height(30);
-            // trajectoryPtr->Freq_Change_Straight(0.05, 0.2, 0.05, 1);
-            // IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
-            // IK_Ptr->Change_Angle_Compensation(3, 3, 2, 2, 3, 2, 2, -2);   
-            // IK_Ptr->Set_Angle_Compensation(67);
             trajectoryPtr->Step_in_place(0.05, 0.25, 0.025);
             IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
             IK_Ptr->Change_Angle_Compensation(2, 2, 0, -2, 2, 2, 0, -2);
@@ -203,15 +242,11 @@ void Callback::SelectMotion(int go)
         {
             re = 1;
             indext = 0;
-
+            angle = 8;
+            line_turn = true;
 
             trajectoryPtr->Change_Freq(2);
-            // mode = Motion_Index::Step_in_place;
             IK_Ptr->Change_Com_Height(30);
-            // trajectoryPtr->Freq_Change_Straight(0.05, 0.2, 0.05, 1);
-            // IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
-            // IK_Ptr->Change_Angle_Compensation(3, 3, 2, 2, 3, 2, 2, -2);   
-            // IK_Ptr->Set_Angle_Compensation(67);
             trajectoryPtr->Step_in_place(0.05, 0.25, 0.025);
             IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
             IK_Ptr->Change_Angle_Compensation(2, 2, 0, -2, 2, 2, 0, -2);
@@ -219,7 +254,50 @@ void Callback::SelectMotion(int go)
             RCLCPP_WARN(this->get_logger(), "경로 생성");
         }
 
-        else if(go == 5)//PickMotion
+        else if(go == 4)//Back_2step
+        {
+            re = 1;
+            indext = 0;
+
+            trajectoryPtr->Change_Freq(2);
+            // mode = Motion_Index::Back_2step;
+            IK_Ptr->Change_Com_Height(30);
+            trajectoryPtr->Go_Back_Straight(-0.04, -0.2, 0.05);
+            IK_Ptr->Change_Angle_Compensation(2, 2, 0, -2, 2, 2, 0, -2); 
+            IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
+            IK_Ptr->Set_Angle_Compensation(135);
+        }
+
+        else if(go == 5)//Back_Halfstep
+        {
+            re = 1;
+            indext = 0;
+
+            trajectoryPtr->Change_Freq(2);
+            // mode = Motion_Index::Back_Halfstep;
+            IK_Ptr->Change_Com_Height(30);
+            trajectoryPtr->Go_Back_Straight(-0.04, -0.12, 0.05);
+            IK_Ptr->Change_Angle_Compensation(2, 2, 0, -2, 2, 2, 0, -2); 
+            IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
+            IK_Ptr->Set_Angle_Compensation(135);
+        }
+                
+        else if(go == 6)//Forward_Halfstep
+        {
+            re = 1;
+            indext = 0;
+
+            trajectoryPtr->Change_Freq(2);
+            // mode = Motion_Index::Forward_Halfstep;
+            IK_Ptr->Change_Com_Height(30);
+            trajectoryPtr->Go_Straight(0.01, 0.03, 0.025);
+            IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
+            IK_Ptr->Change_Angle_Compensation(2, 2, 0, -2, 2, 2, 0, -2); 
+            IK_Ptr->Set_Angle_Compensation(135);
+        }
+
+
+        else if(go == 7)//PickMotion
         {
             re = 1;
             indext = 0;
@@ -231,7 +309,7 @@ void Callback::SelectMotion(int go)
             trajectoryPtr->Picking_Motion(300, 150, 0.165);
         }
         
-        else if(go == 6)//Huddle 1
+        else if(go == 8)//Huddle 1
         {
             re = 1;
             indext = 0;
@@ -256,7 +334,7 @@ void Callback::SelectMotion(int go)
 
         // }
 
-        // else if(go == 77)//RECOVERY
+        // else if(go == 77)//RECOVERY    200  0~199 1~200
         // {
         //     re = 1;
         //     indext = 0;
@@ -296,6 +374,17 @@ void Callback::Write_All_Theta()
             {
                 IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
                 IK_Ptr->Fast_Angle_Compensation(indext);
+                if(indext>=67 && indext<=134)
+                {
+                    IK_Ptr->RL_th[0] = (trajectoryPtr->Turn_Trajectory(index_angle));
+                    step = (IK_Ptr->RL_th[0])/2;
+                    index_angle += 1;
+                    std::cout << "index_angle" << index_angle << "walktime_n" << walktime_n << std::endl;
+                    if (index_angle > 66)
+                    {
+                        index_angle = 0;
+                    }
+                }
             }
 
             else if (go == 2)//Step_in_place 우회전
@@ -303,8 +392,10 @@ void Callback::Write_All_Theta()
                 
                 IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
                 IK_Ptr->Angle_Compensation(indext, trajectoryPtr->Ref_RL_x.cols());
-                std::cout << "indext" << indext << std::endl;
-                if(mode > 2 && indext>=67 && indext <=337)
+
+                // int remain = pending_turns.load(std::memory_order_acquire);
+                // std::cout << "indext" << indext << std::endl;
+                if(indext>=67 && indext <=337)
                 {
                     IK_Ptr->RL_th[0] = -(trajectoryPtr->Turn_Trajectory(index_angle));
                     step = (IK_Ptr->RL_th[0])/2;
@@ -313,6 +404,17 @@ void Callback::Write_All_Theta()
                     if (index_angle > walktime_n - 1)
                     {
                         index_angle = 0;
+                        // int prev = pending_turns.fetch_sub(1, std::memory_order_acq_rel);
+                        // if (prev <= 1)
+                        // {
+                        //     IK_Ptr->RL_th[0] = 0;
+                        //     pending_turns.store(0, std::memory_order_relaxed);
+
+                        //     go = 0;
+                        //     SelectMotion(0);
+                        //     return;        
+                            
+                        // }
                     }
                 }
             }
@@ -322,8 +424,10 @@ void Callback::Write_All_Theta()
                 
                 IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
                 IK_Ptr->Angle_Compensation(indext, trajectoryPtr->Ref_RL_x.cols());
-                std::cout << "indext" << indext << std::endl;
-                if(mode > 2 && mode <5  && indext > 135 && indext <= 270)
+
+                // int remain = pending_turns.load(std::memory_order_acquire);
+                // std::cout << "indext" << indext << std::endl;
+                if(indext > 135 && indext <= 270)
                 {
                     IK_Ptr->LL_th[0] = trajectoryPtr->Turn_Trajectory(index_angle);
                     step = (IK_Ptr->LL_th[0])/2;
@@ -331,20 +435,42 @@ void Callback::Write_All_Theta()
                     std::cout << "index_angle" << index_angle << std::endl;
                     if (index_angle > walktime_n - 1)
                     {
-                        index_angle = 0; 
+                        index_angle = 0;
+                        // int prev = pending_turns.fetch_sub(1, std::memory_order_acq_rel);
+                        // if (prev <= 1)
+                        // {
+                        //     IK_Ptr->LL_th[0] = 0;
+                        //     pending_turns.store(0, std::memory_order_relaxed);
+
+                        //     go = 0;
+                        //     SelectMotion(0);
+                        //     return;        
+                        // }
                     }
                 }
 
             }
 
-            else if (go == 5) // Pick
+            else if (go == 4 || go == 5)//Back_Halfstep //Back_2step
+            {
+                IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
+                IK_Ptr->Angle_Compensation(indext, trajectoryPtr->Ref_RL_x.cols());
+            }
+
+            else if (go == 6)//Forward_Halfstep
+            {
+                IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
+                IK_Ptr->Angle_Compensation(indext, trajectoryPtr->Ref_RL_x.cols());
+            }
+
+            else if (go == 7) // Pick
             {
                 IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
                 IK_Ptr->Fast_Angle_Compensation(indext);
             }
 
 
-            else if(go == 6)//Huddle 1
+            else if(go == 8)//Huddle 1
             {
                 IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
                 IK_Ptr->Angle_Compensation_Huddle(indext);
@@ -372,7 +498,6 @@ void Callback::Write_All_Theta()
     {
 
         re = 0;
-        mode += 1;
 
         
     }
@@ -391,8 +516,6 @@ void Callback::Write_All_Theta()
 
     // RCLCPP_INFO(this->get_logger(),
     // "All_Theta(3) 보정 적용 전후: %.4f → %.4f (보정량: %.4f)", All_Theta(3), theta_correction);
-
-    
 
 
     // All_Theta 계산 및 저장

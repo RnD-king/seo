@@ -10,7 +10,8 @@
 #include <boost/thread.hpp>
 #include <Eigen/Dense>  // Eigen 관련 헤더 추가
 #include "sensor_msgs/msg/imu.hpp" //
-
+#include "robot_msgs/msg/line_result.hpp"
+#include <atomic>
 
 #include "dynamixel.hpp"
 #include "BRP_Kinematics.hpp"
@@ -41,6 +42,18 @@ private:
     double Goal_joint_[NUMBER_OF_DYNAMIXELS];
 
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscriber_; //
+    
+    using LineResult = robot_msgs::msg::LineResult;
+
+    rclcpp::Subscription<LineResult>::SharedPtr line_subscriber_;
+    
+    void OnLineResult(const LineResult::SharedPtr msg);
+
+    inline static constexpr double kStepDeg  = 8.0;
+    inline static constexpr double kRoundUp  = 6.0;
+
+    std::atomic<int>  pending_turns{0};
+    std::atomic<bool> line_turn{false};
 
 public:
     Callback(Trajectory *trajectoryPtr, IK_Function *IK_Ptr, Dxl *dxlPtr, Pick *pick_Ptr);
@@ -69,6 +82,7 @@ public:
     void callbackThread();
     void Set();
     void ResetMotion();
+    void TATA();
 
     //모션 종료 확인 여부
     bool IsMotionFinish();
@@ -82,16 +96,22 @@ public:
     int indext = 0;
     int mode = 0;                   
     int index_angle = 0;
+    int turncount = 0;
+    int angle = 0;
+
 
     double step = 0;
     double RL_th2 = 0, LL_th2 = 0;
     double RL_th1 = 0, LL_th1 = 0;
     double HS = 0;  
-    double SR = 0;  
+    double SR = 0; 
+    double extra_angle = 0;
+    double turn_angle = 0;    
 
     VectorXd All_Theta = MatrixXd::Zero(NUMBER_OF_DYNAMIXELS, 1);
     VectorXd initial_theta = VectorXd::Zero(NUMBER_OF_DYNAMIXELS);
     bool initial_theta_saved = false;
+
 
 
     double walkfreq = 1.48114;

@@ -5,6 +5,7 @@
 #include "BRP_Kinematics.hpp"
 #include "NewPattern2.hpp"     // 사용자 정의: 보행 궤적 생성기
 #include "robot_msgs/msg/motion_command.hpp"  //motion command 불러오기
+
 // #include "robot_msgs/msg/motion_end.hpp"  //motion end 불러오기
 
 
@@ -60,10 +61,6 @@ public:
         subscription_ = this->create_subscription<robot_msgs::msg::MotionCommand>(
             "/motion_command", 10, std::bind(&MainNode::MotionCallback, this, std::placeholders::_1));
 
-        
-        // //motion_end를 publish
-        // motion_end_pub_ = this->create_publisher<robot_msgs::msg::MotionEnd>("/motion_end", 10);
-
 
         // 100Hz 루프 타이머 생성 (처음엔 중단 상태)
         motion_loop_timer_ = this->create_wall_timer(
@@ -86,61 +83,53 @@ private:
 
     void MotionCallback(const robot_msgs::msg::MotionCommand::SharedPtr msg)        
     {
+
+        if (motion_in_progress_) {
+            RCLCPP_WARN(this->get_logger(), "동작 중: 명령 무시됨");
+            return;
+        }
+
         if (msg->command == 1) //직진
         {
-            if (motion_in_progress_) {
-                RCLCPP_WARN(this->get_logger(), "동작 중: 명령 무시됨");
-                return;
-            }
             int go = 1;
             callback_->SelectMotion(go);
-            motion_in_progress_ = true;
-            motion_loop_timer_->reset();
+            callback_->TATA();
         }
 
         else if (msg->command == 2) //우회전
         {
-            if (motion_in_progress_) {
-                RCLCPP_WARN(this->get_logger(), "동작 중: 명령 무시됨");
-                return;
-            }
             int go = 2;
             callback_->SelectMotion(go);
-            motion_in_progress_ = true;
-            motion_loop_timer_->reset();
+            callback_->TATA();
         }
 
         else if (msg->command == 3) //좌회전
         {
-            if (motion_in_progress_) {
-                RCLCPP_WARN(this->get_logger(), "동작 중: 명령 무시됨");
-                return;
-            }
             int go = 3;
             callback_->SelectMotion(go);
-            motion_in_progress_ = true;
-            motion_loop_timer_->reset();
+            callback_->TATA();
         }
 
-        // else if (msg->command == 4) //징검다리
-        // {
-        //     if (motion_in_progress_) {
-        //         RCLCPP_WARN(this->get_logger(), "동작 중: 명령 무시됨");
-        //         return;
-        //     }
-        //     int go = 4;
-
-        //     motion_in_progress_ = true;
-        //     motion_loop_timer_->reset();
-        // }
-
-
-        else if (msg->command == 5) //Pick
+        else if (msg->command == 4) //BACK
         {
-            if (motion_in_progress_) {
-                RCLCPP_WARN(this->get_logger(), "동작 중: 명령 무시됨");
-                return;
-            }
+            int go = 4;
+            callback_->SelectMotion(go);
+        }
+
+        else if (msg->command == 5) //BACK_HALF
+        {
+            int go = 5;
+            callback_->SelectMotion(go);
+        }
+
+        else if (msg->command == 6) //FORWARD_HALF
+        {
+            int go = 6;
+            callback_->SelectMotion(go);
+        }
+
+        else if (msg->command == 7) //Pick
+        {
 
             if (ball_catch_) { // 이미 공 들고 있으면 Pick 금지
                 RCLCPP_WARN(this->get_logger(), "[PICK] 이미 공 보유(ball_catch_=true) → 무시");
@@ -150,29 +139,16 @@ private:
             int go = 5;
             callback_->SelectMotion(go);
             ball_catch_ = true;
-            motion_in_progress_ = true;
-            motion_loop_timer_->reset();
         }
 
-        else if (msg->command == 6) //Hurdle
+        else if (msg->command == 8) //Hurdle
         {
-            if (motion_in_progress_) {
-                RCLCPP_WARN(this->get_logger(), "동작 중: 명령 무시됨");
-                return;
-            }
             int go = 6;
             callback_->SelectMotion(go);
-            motion_in_progress_ = true;
-            motion_loop_timer_->reset();
         }
 
-        else if (msg->command == 7) //Shoot
+        else if (msg->command == 9) //Shoot
         {
-            if (motion_in_progress_) {
-                RCLCPP_WARN(this->get_logger(), "동작 중: 명령 무시됨");
-                return;
-            }
-
             if (!ball_catch_) { // 공 없으면 슛 금지
                 RCLCPP_WARN(this->get_logger(), "[SHOOT] 공 없음(ball_catch_=false) → 무시");
                 return;
@@ -181,16 +157,11 @@ private:
             int go = 7;
             callback_->SelectMotion(go);
             ball_catch_ = false;
-            motion_in_progress_ = true;
-            motion_loop_timer_->reset();
         }
 
         else if (msg->command == 77) //RECOVERY 
         {
             RCLCPP_INFO(this->get_logger(), "[RECOVERY] 명령 수신");
-
-            motion_in_progress_ = false;
-            motion_loop_timer_->cancel();
 
             int go = 77;
             callback_->SelectMotion(go);
@@ -205,27 +176,22 @@ private:
         {
             RCLCPP_INFO(this->get_logger(), "[STOP] 명령 수신");
 
-            motion_in_progress_ = false;
-            motion_loop_timer_->cancel();
-        
             callback_->Set();
             dxl_->MoveToTargetSmoothCos(callback_->All_Theta, 150, 10);
 
             //경로 초기화
             callback_->ResetMotion();
-
-            robot_msgs::msg::MotionEnd motion_end_msg;
-            motion_end_msg.motion_end_detect = true;
-
-            motion_end_pub_->publish(motion_end_msg);      // /motion_end 퍼블리시
             RCLCPP_INFO(this->get_logger(), "[MotionEnd] 모션 종료 메시지 전송");
         }
 
-
-        else
+        else 
         {
             RCLCPP_WARN(this->get_logger(), "정의되지 않은 command=%d", msg->command);
         }
+
+        motion_in_progress_ = true;
+        motion_loop_timer_->reset();
+
     }
 
     // 주기적으로 각도 갱신 및 모션 종료 여부 판단
@@ -247,12 +213,6 @@ private:
         if (callback_->IsMotionFinish())
         {
 
-            // RCLCPP_INFO(this->get_logger(), "[MotionLoop] Motion finished");
-            // robot_msgs::msg::MotionEnd motion_end_msg;
-            // motion_end_msg.motion_end_detect = true;
-
-            // motion_end_pub_->publish(motion_end_msg);      // /motion_end 퍼블리시
-            // RCLCPP_INFO(this->get_logger(), "[MotionEnd] 모션 종료 메시지 전송");
 
             int go = 0;
             motion_in_progress_ = false;                   // 상태 초기화
@@ -271,8 +231,6 @@ private:
 
     // motioncommand subscribe
     rclcpp::Subscription<robot_msgs::msg::MotionCommand>::SharedPtr subscription_;
-    // motion_end publisher
-    rclcpp::Publisher<robot_msgs::msg::MotionEnd>::SharedPtr motion_end_pub_;
 
 };
 

@@ -618,6 +618,25 @@ void Trajectory::Side_Left2()
 	Ref_LL_z = LF_zsimulation_leftwalk();
 }
 
+void Trajectory::Go_Back_Straight(double step, double distance, double height)
+{
+	Set_step(step);
+	Set_distance_back(distance);
+	Xcom = XComSimulation();
+	Ycom = YComSimulation();
+	LF_xFoot = LF_xsimulation_straightwalk();
+	RF_xFoot = RF_xsimulation_straightwalk();
+	RF_yFoot = -L0 * MatrixXd::Ones(1, sim_n);
+	LF_yFoot = L0 * MatrixXd::Ones(1, sim_n);
+	Ref_RL_x = RF_xFoot - Xcom;
+	Ref_LL_x = LF_xFoot - Xcom;
+	Ref_RL_y = RF_yFoot - Ycom;
+	Ref_LL_y = LF_yFoot - Ycom;
+	Ref_RL_z = RF_zsimulation_straightwalk(height);
+	Ref_LL_z = LF_zsimulation_straightwalk(height);
+}
+
+
 
 // // standard : body.. so, foot -> body  = sit motion 
 // // For Pick and huddle 

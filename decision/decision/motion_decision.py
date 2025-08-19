@@ -7,10 +7,12 @@ class Motion:
     FORWARD = 1 
     TURN_LEFT = 2
     TURN_RIGHT = 3
-    PICK = 4
-    STEP = 5
-    HURDLE = 6
-    SHOOT = 7
+    BACK = 4
+    BACK_HALF = 5
+    FORWARD_HALF = 6
+    PICK = 7
+    HURDLE = 8
+    SHOOT = 9
     RECOVERY = 77
     STOP = 99
 
@@ -104,19 +106,27 @@ class MotionDecision(Node):
             motion_msg.command = Motion.TURN_RIGHT
             motion_msg.detail = "Test: Moving Turn Right"
         
-        elif self.res == 4:   # 징검다리
-            motion_msg.command = Motion.STEP
-            motion_msg.detail = "Test: Step Motion"
+        elif self.res == 4:   
+            motion_msg.command = Motion.BACK
+            motion_msg.detail = "Test: BACK Motion"
 
-        elif self.res == 5:
+        elif self.res == 5:   
+            motion_msg.command = Motion.BACK_HALF
+            motion_msg.detail = "Test: BACK HALF Motion"
+
+        elif self.res == 6:   
+            motion_msg.command = Motion.FORWARD_HALF
+            motion_msg.detail = "Test: FORWARD HALF Motion"
+
+        elif self.res == 7:
             motion_msg.command = Motion.PICK
             motion_msg.detail = "Test: Pick Motion"
 
-        elif self.res == 6:
+        elif self.res == 8:
             motion_msg.command = Motion.HURDLE
             motion_msg.detail = "Test: Hurdle Motion"
 
-        elif self.res == 7:
+        elif self.res == 9:
             motion_msg.command = Motion.SHOOT
             motion_msg.detail = "Test: Shoot Motion"
 
