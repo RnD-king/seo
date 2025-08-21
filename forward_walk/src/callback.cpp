@@ -3,6 +3,12 @@
 #include <cmath>  
 #include "robot_msgs/msg/line_result.hpp"
 
+namespace {
+constexpr double kRad2Deg = 57.2957795130823208768; // 180/pi
+inline double Rad2Deg(double r) { return r * kRad2Deg; }
+}
+
+
 bool flgflg = 0;
 FILE *Trajectory_all;
 
@@ -125,6 +131,10 @@ void Callback::OnLineResult(const LineResult::SharedPtr msg)
 
     pending_turns.store(turncount, std::memory_order_relaxed);
     line_turn.store(false, std::memory_order_release); // 원샷 종료
+
+    RCLCPP_INFO(this->get_logger(),
+        "[OnLineResult] angle=%.2f deg -> turncount=%d (extra_angle=%.2f %s %.1f)",
+        line_angle_, turncount, extra_angle);
 }
 
 // ros2 topic pub /START std_msgs/msg/Bool "data: true" -1
@@ -183,7 +193,10 @@ void Callback::callbackThread()
 
 void Callback::SelectMotion(int go)
 {
-    RCLCPP_WARN(this->get_logger(), "[SelectMotion] called: go=%d, re=%d", go, re);
+
+    go_ = go;
+
+    // RCLCPP_WARN(this->get_logger(), "[SelectMotion] called: go=%d, re=%d", go, re);
     if(re == 0)
     {
         if(go == 0)
@@ -228,6 +241,9 @@ void Callback::SelectMotion(int go)
             angle = 8;
             line_turn = true;
 
+            index_angle = 0; // ★ 턴 진행 인덱스 리셋 (로그용/안전) 
+            pending_turns.store(0, std::memory_order_relaxed);
+
             trajectoryPtr->Change_Freq(2);
             // mode = Motion_Index::Step_in_place;
             IK_Ptr->Change_Com_Height(30);
@@ -244,6 +260,9 @@ void Callback::SelectMotion(int go)
             indext = 0;
             angle = 8;
             line_turn = true;
+
+            index_angle = 0; // ★ 턴 진행 인덱스 리셋 (로그용/안전) 
+            pending_turns.store(0, std::memory_order_relaxed);
 
             trajectoryPtr->Change_Freq(2);
             IK_Ptr->Change_Com_Height(30);
@@ -368,7 +387,8 @@ void Callback::Write_All_Theta()
     {
         if(re == 1)
         {
-            RCLCPP_INFO(rclcpp::get_logger("Callback"), "[Write_All_Theta] indext = %d / step_n = %ld", indext, trajectoryPtr->Ref_RL_x.cols());
+            int go = go_;
+            RCLCPP_INFO(rclcpp::get_logger("Callback"), "[Write_All_Theta] indext = %d / step_n = %ld / go = %d", indext, trajectoryPtr->Ref_RL_x.cols(), go);
             
             if (go == 1) //걷기
             {
@@ -379,7 +399,7 @@ void Callback::Write_All_Theta()
                     IK_Ptr->RL_th[0] = (trajectoryPtr->Turn_Trajectory(index_angle));
                     step = (IK_Ptr->RL_th[0])/2;
                     index_angle += 1;
-                    std::cout << "index_angle" << index_angle << "walktime_n" << walktime_n << std::endl;
+                    // std::cout << "index_angle" << index_angle << "walktime_n" << walktime_n << std::endl;
                     if (index_angle > 66)
                     {
                         index_angle = 0;
@@ -397,14 +417,25 @@ void Callback::Write_All_Theta()
                 // std::cout << "indext" << indext << std::endl;
                 if(indext>=67 && indext <=337)
                 {
-                    IK_Ptr->RL_th[0] = -(trajectoryPtr->Turn_Trajectory(index_angle));
+                    // IK_Ptr->RL_th[0] = -(trajectoryPtr->Turn_Trajectory(index_angle));
+                    double yaw_cmd = trajectoryPtr->Turn_Trajectory(index_angle);
+                    IK_Ptr->LL_th[0] = yaw_cmd;
+
+                    // 최소 로그 (도 단위로 보기 편하게)
+
+                    RCLCPP_INFO(this->get_logger(),
+                        "[TURN][L] indext=%d idxAng=%d  yaw=%.2f deg  →  LL_th[0]=%.2f deg",
+                        indext, index_angle, yaw_cmd, IK_Ptr->LL_th[0]);
                     step = (IK_Ptr->RL_th[0])/2;
                     index_angle += 1;
-                    std::cout << "index_angle" << index_angle << std::endl;
+                    // std::cout << "index_angle" << index_angle << std::endl;
                     if (index_angle > walktime_n - 1)
                     {
                         index_angle = 0;
                         // int prev = pending_turns.fetch_sub(1, std::memory_order_acq_rel);
+                        // RCLCPP_INFO(this->get_logger(),
+                        //     "[TurnCycleEnd L] 1 cycle consumed. prev=%d -> now=%d",
+                        //     prev, prev-1);
                         // if (prev <= 1)
                         // {
                         //     IK_Ptr->RL_th[0] = 0;
@@ -429,10 +460,16 @@ void Callback::Write_All_Theta()
                 // std::cout << "indext" << indext << std::endl;
                 if(indext > 135 && indext <= 270)
                 {
-                    IK_Ptr->LL_th[0] = trajectoryPtr->Turn_Trajectory(index_angle);
+                    // IK_Ptr->LL_th[0] = trajectoryPtr->Turn_Trajectory(index_angle);
+                    double yaw_cmd = trajectoryPtr->Turn_Trajectory(index_angle);
+                    IK_Ptr->RL_th[0] = -yaw_cmd;
+
+                    RCLCPP_INFO(this->get_logger(),
+                        "[TURN][R] indext=%d idxAng=%d  yaw=%.2f deg  →  RL_th[0]=%.2f deg",
+                        indext, index_angle, yaw_cmd, IK_Ptr->RL_th[0]);
                     step = (IK_Ptr->LL_th[0])/2;
                     index_angle = index_angle + 1;
-                    std::cout << "index_angle" << index_angle << std::endl;
+                    // std::cout << "index_angle" << index_angle << std::endl;
                     if (index_angle > walktime_n - 1)
                     {
                         index_angle = 0;
@@ -551,27 +588,27 @@ void Callback::Write_All_Theta()
     if (!initial_theta_saved && indext == 1) {
         initial_theta = All_Theta;
         initial_theta_saved = true;
-        RCLCPP_INFO(this->get_logger(), "[Write_All_Theta]  초기자세 저장 완료");
+        // RCLCPP_INFO(this->get_logger(), "[Write_All_Theta]  초기자세 저장 완료");
 
-        for (int i = 0; i < All_Theta.size(); ++i)
-        {
-            RCLCPP_INFO(this->get_logger(), "All_Theta[%d] = %f", i, All_Theta[i]);
-        }
-        return;
+        // for (int i = 0; i < All_Theta.size(); ++i)
+        // {
+        //     RCLCPP_INFO(this->get_logger(), "All_Theta[%d] = %f", i, All_Theta[i]);
+        // }
+        // return;
     }
 
     // [2] 마지막 자세 복원
     if (initial_theta_saved && indext == trajectoryPtr->Ref_RL_x.cols()) {
         All_Theta = initial_theta;
         initial_theta_saved = false;
-        RCLCPP_INFO(this->get_logger(), "[Write_All_Theta]  마지막 프레임에서 자세 복원됨");
+        // RCLCPP_INFO(this->get_logger(), "[Write_All_Theta]  마지막 프레임에서 자세 복원됨");
 
-        // 디버깅 정보 출력
-        for (int i = 0; i < All_Theta.size(); ++i)
-        {
-            RCLCPP_INFO(this->get_logger(), "All_Theta[%d] = %f", i, All_Theta[i]);
-        }
-        return;
+        // // 디버깅 정보 출력
+        // for (int i = 0; i < All_Theta.size(); ++i)
+        // {
+        //     RCLCPP_INFO(this->get_logger(), "All_Theta[%d] = %f", i, All_Theta[i]);
+        // }
+        // return;
     }
 
 

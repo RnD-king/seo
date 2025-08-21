@@ -73,7 +73,9 @@ private:
 
 
     bool motion_in_progress_ = false;                              // 현재 모션 실행 중인지 여부
-    rclcpp::TimerBase::SharedPtr motion_loop_timer_;       // 반복 제어용 타이머\
+    int  current_go_ = 0;
+    bool plan_needs_build_ = false;
+    rclcpp::TimerBase::SharedPtr motion_loop_timer_;       // 반복 제어용 타이머
 
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr start_pub_;
     rclcpp::TimerBase::SharedPtr start_timer_;
@@ -88,110 +90,70 @@ private:
             RCLCPP_WARN(this->get_logger(), "동작 중: 명령 무시됨");
             return;
         }
-
-        if (msg->command == 1) //직진
+        
+        int go_ = 0;
+        switch (msg->command) 
         {
-            int go = 1;
-            callback_->SelectMotion(go);
-            callback_->TATA();
-        }
+            case 1: go_ = 1; break;              // 직진
 
-        else if (msg->command == 2) //우회전
-        {
-            int go = 2;
-            callback_->SelectMotion(go);
-            callback_->TATA();
-        }
+            case 2: go_ = 2; break;              // 우회전
 
-        else if (msg->command == 3) //좌회전
-        {
-            int go = 3;
-            callback_->SelectMotion(go);
-            callback_->TATA();
-        }
+            case 3: go_ = 3; break;              // 좌회전
 
-        else if (msg->command == 4) //BACK
-        {
-            int go = 4;
-            callback_->SelectMotion(go);
-        }
+            case 4: go_ = 4; break;              // BACK
 
-        else if (msg->command == 5) //BACK_HALF
-        {
-            int go = 5;
-            callback_->SelectMotion(go);
-        }
+            case 5: go_ = 5; break;              // BACK_HALF
 
-        else if (msg->command == 6) //FORWARD_HALF
-        {
-            int go = 6;
-            callback_->SelectMotion(go);
-        }
+            case 6: go_ = 6; break;              // FORWARD_HALF
 
-        else if (msg->command == 7) //Pick
-        {
+            case 7: // Pick
+                if (ball_catch_) 
+                { 
+                    RCLCPP_WARN(this->get_logger(), "[PICK] 이미 공 보유 → 무시"); 
+                    return; 
+                }
+                go_ = 7; 
+                ball_catch_ = true; 
+                break;
+                
+            case 8: go_ = 8; break;              // Hurdle
 
-            if (ball_catch_) { // 이미 공 들고 있으면 Pick 금지
-                RCLCPP_WARN(this->get_logger(), "[PICK] 이미 공 보유(ball_catch_=true) → 무시");
+            case 9: // Shoot
+                if (!ball_catch_) 
+                { 
+                    RCLCPP_WARN(this->get_logger(), "[SHOOT] 공 없음 → 무시"); 
+                    return; 
+                }
+                go_ = 9; 
+                ball_catch_ = false; 
+                break;
+
+            case 77: // RECOVERY (즉시 처리 그대로 유지)
+                RCLCPP_INFO(this->get_logger(), "[RECOVERY] 명령 수신");
+                callback_->SelectMotion(77);
+                callback_->Set();
+                dxl_->MoveToTargetSmoothCos(callback_->All_Theta, 150, 10);
                 return;
-            }
 
-            int go = 5;
-            callback_->SelectMotion(go);
-            ball_catch_ = true;
-        }
-
-        else if (msg->command == 8) //Hurdle
-        {
-            int go = 6;
-            callback_->SelectMotion(go);
-        }
-
-        else if (msg->command == 9) //Shoot
-        {
-            if (!ball_catch_) { // 공 없으면 슛 금지
-                RCLCPP_WARN(this->get_logger(), "[SHOOT] 공 없음(ball_catch_=false) → 무시");
+            case 99: // STOP (즉시 처리 그대로 유지)
+                RCLCPP_INFO(this->get_logger(), "[STOP] 명령 수신");
+                callback_->Set();
+                dxl_->MoveToTargetSmoothCos(callback_->All_Theta, 150, 10);
+                callback_->ResetMotion();
+                RCLCPP_INFO(this->get_logger(), "[MotionEnd] 모션 종료 메시지 전송");
                 return;
-            }
 
-            int go = 7;
-            callback_->SelectMotion(go);
-            ball_catch_ = false;
+            default:
+                RCLCPP_WARN(this->get_logger(), "정의되지 않은 command=%d", msg->command);
+                return;
         }
 
-        else if (msg->command == 77) //RECOVERY 
-        {
-            RCLCPP_INFO(this->get_logger(), "[RECOVERY] 명령 수신");
-
-            int go = 77;
-            callback_->SelectMotion(go);
-            callback_->Set();
-            dxl_->MoveToTargetSmoothCos(callback_->All_Theta, 150, 10);
-
-            //recovery 모션 함수
-            //RecoveryMotion();
-        }
-
-        else if (msg->command == 99) //STOP
-        {
-            RCLCPP_INFO(this->get_logger(), "[STOP] 명령 수신");
-
-            callback_->Set();
-            dxl_->MoveToTargetSmoothCos(callback_->All_Theta, 150, 10);
-
-            //경로 초기화
-            callback_->ResetMotion();
-            RCLCPP_INFO(this->get_logger(), "[MotionEnd] 모션 종료 메시지 전송");
-        }
-
-        else 
-        {
-            RCLCPP_WARN(this->get_logger(), "정의되지 않은 command=%d", msg->command);
-        }
+        // === 여기서는 '무엇을 할지'만 기록하고 루프 첫 틱에서 계획 생성 ===
+        current_go_ = go_;
+        plan_needs_build_ = true;
 
         motion_in_progress_ = true;
         motion_loop_timer_->reset();
-
     }
 
     // 주기적으로 각도 갱신 및 모션 종료 여부 판단
@@ -204,7 +166,8 @@ private:
             return;
         }
 
-        RCLCPP_INFO(this->get_logger(), "[MotionLoop] before Write_All_Theta()");
+        callback_->SelectMotion(current_go_);
+        callback_->TATA();
         callback_->Write_All_Theta();                      // 현재 프레임의 목표 각도 계산
         dxl_->SetThetaRef(callback_->All_Theta);           // 목표 각도 설정
         dxl_->syncWriteTheta();                            // 모터에 전송
@@ -213,10 +176,9 @@ private:
         if (callback_->IsMotionFinish())
         {
 
-
-            int go = 0;
             motion_in_progress_ = false;                   // 상태 초기화
             motion_loop_timer_->cancel();                  // 타이머 중지
+            current_go_ = 0;
         }
     }
 

@@ -1265,15 +1265,13 @@ void Trajectory::Make_turn_trajectory(double angle)
 		else
 			Turn_Trajectory(i) = 0;
 	}
+	
+	// for (int i = 0; i < walktime_n; ++i) {
+    // double deg = Turn_Trajectory(i) * 180.0 / M_PI; // 라디안→도
+    // std::printf("[TurnTraj] i=%4d  %.3f deg\n", i, deg);
+    // // 또는 RCLCPP_INFO(this->get_logger(), "[TurnTraj] i=%d %.3f deg", i, deg);
+	// }
 
-	// printf("[Info]20 %.6f\n", Turn_Trajectory(20));
-	// printf("[Info]40 %.6f\n", Turn_Trajectory(40));
-	// printf("[Info]60 %.6f\n", Turn_Trajectory(60));
-	// printf("[Info]80 %.6f\n", Turn_Trajectory(80));
-	// printf("[Info]100 %.6f\n", Turn_Trajectory(100));
-	// printf("[Info]120 %.6f\n", Turn_Trajectory(120));
-	// printf("[Info]130 %.6f\n", Turn_Trajectory(130));
-	// printf("[Info]walktime_n %.d\n", walktime_n);
 }
 
 double Trajectory::Return_turn_trajectory(double t)

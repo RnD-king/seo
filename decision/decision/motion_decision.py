@@ -74,14 +74,14 @@ class MotionDecision(Node):
 
 
 
-    def MotionEndCallback(self, motion_end_msg: MotionEnd):
-        self.get_logger().info(f"[MotionEnd] motion_end: {motion_end_msg.motion_end_detect}")
-        self.motion_end_detect = motion_end_msg.motion_end_detect
-        self.MotionResult()
+    # def MotionEndCallback(self, motion_end_msg: MotionEnd):
+    #     self.get_logger().info(f"[MotionEnd] motion_end: {motion_end_msg.motion_end_detect}")
+    #     self.motion_end_detect = motion_end_msg.motion_end_detect
+    #     self.MotionResult()
 
     # subscribe한 fall_msg와 line_msg를 이용한 motion 결정
     def MotionResult(self):
-        self.get_logger().info(f"[MotionResult] res: {self.res}, fall_detect: {self.fall_detect}, motion_end_detect: {self.motion_end_detect}")
+        self.get_logger().info(f"[MotionResult] res: {self.res}, fall_detect: {self.fall_detect}")
         
         # if not self.motion_end_detect:
         #     self.get_logger().info("아직 모션 미완료")

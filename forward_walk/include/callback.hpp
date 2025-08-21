@@ -91,6 +91,7 @@ public:
     
             
     int go = 0;
+    int go_ = 0;
     int re = 0;
     int emergency = 99;
     int indext = 0;
