@@ -110,31 +110,57 @@ void Callback::ImuCallback(const sensor_msgs::msg::Imu::SharedPtr msg)
     }
 }
 
+int Callback::GetTurnsRemaining() const {
+    return turns_remaining_.load(std::memory_order_acquire);
+}
+const void* Callback::GetTurnsRemainingAddr() const {
+    return static_cast<const void*>(&turns_remaining_);
+}
+// "남은 유닛 턴 수"를 delta만큼 감소시키고, '감소 전 값'을 반환.
+// acq_rel: 감소 전 읽기(acquire)와 감소 쓰기(release) 모두의 메모리 순서 보장.
+int Callback::FetchSubTurnsRemaining(int delta) {
+    return turns_remaining_.fetch_sub(delta, std::memory_order_acq_rel);
+}
+
+// "남은 유닛 턴 수"를 v로 설정. release 오더: 이후 acquire 로드에서 이 쓰기 이전의 효과가 보장된다.
+void Callback::SetTurnsRemaining(int v) {
+    turns_remaining_.store(v, std::memory_order_release);
+}
+
+
 void Callback::OnLineResult(const LineResult::SharedPtr msg)
 {
+    
     if (!line_turn)
     {
+        RCLCPP_INFO(this->get_logger(), "[OnLineResult] ignored because line_turn==false");
         return;
     }
 
-    constexpr double kStepDeg = 8.0;    // 모션 1회 회전각
-    constexpr double kRoundUp = 6.0;    // 6° 초과면 1회 추가 
+    RCLCPP_INFO(this->get_logger(), "[OnLineResult] recv angle=%.2f, line_turn=%d",
+            msg->angle, (int)line_turn);
 
-    double line_angle_ = msg->angle;  
-    int turncount = static_cast<int>(line_angle_ / kStepDeg);
-    double extra_angle = std::fmod(line_angle_ , kStepDeg);
+    double line_angle_ = msg->angle;
+    const int stepdeg = 8;
 
-    if ( extra_angle >= kRoundUp) 
+    int turncount = static_cast<int>(line_angle_ / stepdeg);
+    double extra_angle = static_cast<int>(line_angle_ - stepdeg * turncount);
+
+    if (extra_angle > 6)
     {
-        ++turncount;
+        turncount += 1;
     }
 
-    pending_turns.store(turncount, std::memory_order_relaxed);
-    line_turn.store(false, std::memory_order_release); // 원샷 종료
+    int before = turns_remaining_.load(std::memory_order_seq_cst);
+    turns_remaining_.store(turncount, std::memory_order_seq_cst);
+    int after  = turns_remaining_.load(std::memory_order_seq_cst);
 
     RCLCPP_INFO(this->get_logger(),
-        "[OnLineResult] angle=%.2f deg -> turncount=%d (extra_angle=%.2f %s %.1f)",
-        line_angle_, turncount, extra_angle);
+      "[OnLineResult] turns_remaining_: %d -> %d (set=%d) @%p",
+      before, after, turncount, static_cast<const void*>(&turns_remaining_));
+
+    line_turn = false;
+
 }
 
 // ros2 topic pub /START std_msgs/msg/Bool "data: true" -1
@@ -175,8 +201,18 @@ void Callback::TATA()
         trajectoryPtr->Make_turn_trajectory(turn_angle);
         // index_angle = 0;
     }
-    // RCLCPP_WARN(this->get_logger(), "TURN_ANGLE : %.2f deg", res_turn_angle);
-    // RCLCPP_INFO(this->get_logger(), "------------------------- TURN_ANGLE ----------------------------");
+}
+
+void Callback::TATA8()
+{
+    double res_turn_angle = 8;
+
+    if (res_turn_angle != 0)
+    {
+        turn_angle = res_turn_angle * DEG2RAD;
+        trajectoryPtr->Make_turn_trajectory(turn_angle);
+        // index_angle = 0;
+    }
 }
 
 void Callback::callbackThread()
@@ -189,6 +225,12 @@ void Callback::callbackThread()
         rclcpp::spin_some(this->get_node_base_interface());
         loop_rate.sleep();
     }
+}
+
+void Callback::SetLineTurn(bool on)
+{
+    line_turn.store(on, std::memory_order_release);
+    RCLCPP_INFO(this->get_logger(), "[line_turn] <- %d", static_cast<int>(on));
 }
 
 void Callback::SelectMotion(int go)
@@ -239,11 +281,8 @@ void Callback::SelectMotion(int go)
             re = 1;
             indext = 0;
             angle = 8;
-            line_turn = true;
 
             index_angle = 0; // ★ 턴 진행 인덱스 리셋 (로그용/안전) 
-            pending_turns.store(0, std::memory_order_relaxed);
-
             trajectoryPtr->Change_Freq(2);
             // mode = Motion_Index::Step_in_place;
             IK_Ptr->Change_Com_Height(30);
@@ -259,10 +298,8 @@ void Callback::SelectMotion(int go)
             re = 1;
             indext = 0;
             angle = 8;
-            line_turn = true;
 
             index_angle = 0; // ★ 턴 진행 인덱스 리셋 (로그용/안전) 
-            pending_turns.store(0, std::memory_order_relaxed);
 
             trajectoryPtr->Change_Freq(2);
             IK_Ptr->Change_Com_Height(30);
@@ -334,8 +371,6 @@ void Callback::SelectMotion(int go)
             indext = 0;
 
 
-
-
             trajectoryPtr->Change_Freq(2);
             // mode = Motion_Index::Huddle;
             IK_Ptr->Change_Com_Height(30);
@@ -376,6 +411,7 @@ void Callback::ResetMotion()
 {
     indext = 0;
     re = 0;
+    index_angle = 0;
 
     RCLCPP_INFO(rclcpp::get_logger("Callback"), "[ResetMotion] 인덱스 및 상태 초기화 완료");
 }
@@ -413,39 +449,16 @@ void Callback::Write_All_Theta()
                 IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
                 IK_Ptr->Angle_Compensation(indext, trajectoryPtr->Ref_RL_x.cols());
 
-                // int remain = pending_turns.load(std::memory_order_acquire);
                 // std::cout << "indext" << indext << std::endl;
                 if(indext>=67 && indext <=337)
                 {
-                    // IK_Ptr->RL_th[0] = -(trajectoryPtr->Turn_Trajectory(index_angle));
-                    double yaw_cmd = trajectoryPtr->Turn_Trajectory(index_angle);
-                    IK_Ptr->LL_th[0] = yaw_cmd;
-
-                    // 최소 로그 (도 단위로 보기 편하게)
-
-                    RCLCPP_INFO(this->get_logger(),
-                        "[TURN][L] indext=%d idxAng=%d  yaw=%.2f deg  →  LL_th[0]=%.2f deg",
-                        indext, index_angle, yaw_cmd, IK_Ptr->LL_th[0]);
+                    IK_Ptr->RL_th[0] = -(trajectoryPtr->Turn_Trajectory(index_angle));
                     step = (IK_Ptr->RL_th[0])/2;
                     index_angle += 1;
                     // std::cout << "index_angle" << index_angle << std::endl;
                     if (index_angle > walktime_n - 1)
                     {
                         index_angle = 0;
-                        // int prev = pending_turns.fetch_sub(1, std::memory_order_acq_rel);
-                        // RCLCPP_INFO(this->get_logger(),
-                        //     "[TurnCycleEnd L] 1 cycle consumed. prev=%d -> now=%d",
-                        //     prev, prev-1);
-                        // if (prev <= 1)
-                        // {
-                        //     IK_Ptr->RL_th[0] = 0;
-                        //     pending_turns.store(0, std::memory_order_relaxed);
-
-                        //     go = 0;
-                        //     SelectMotion(0);
-                        //     return;        
-                            
-                        // }
                     }
                 }
             }
@@ -456,33 +469,17 @@ void Callback::Write_All_Theta()
                 IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
                 IK_Ptr->Angle_Compensation(indext, trajectoryPtr->Ref_RL_x.cols());
 
-                // int remain = pending_turns.load(std::memory_order_acquire);
                 // std::cout << "indext" << indext << std::endl;
                 if(indext > 135 && indext <= 270)
                 {
-                    // IK_Ptr->LL_th[0] = trajectoryPtr->Turn_Trajectory(index_angle);
-                    double yaw_cmd = trajectoryPtr->Turn_Trajectory(index_angle);
-                    IK_Ptr->RL_th[0] = -yaw_cmd;
 
-                    RCLCPP_INFO(this->get_logger(),
-                        "[TURN][R] indext=%d idxAng=%d  yaw=%.2f deg  →  RL_th[0]=%.2f deg",
-                        indext, index_angle, yaw_cmd, IK_Ptr->RL_th[0]);
+                    IK_Ptr->LL_th[0] = trajectoryPtr->Turn_Trajectory(index_angle);
                     step = (IK_Ptr->LL_th[0])/2;
                     index_angle = index_angle + 1;
                     // std::cout << "index_angle" << index_angle << std::endl;
                     if (index_angle > walktime_n - 1)
                     {
                         index_angle = 0;
-                        // int prev = pending_turns.fetch_sub(1, std::memory_order_acq_rel);
-                        // if (prev <= 1)
-                        // {
-                        //     IK_Ptr->LL_th[0] = 0;
-                        //     pending_turns.store(0, std::memory_order_relaxed);
-
-                        //     go = 0;
-                        //     SelectMotion(0);
-                        //     return;        
-                        // }
                     }
                 }
 

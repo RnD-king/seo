@@ -49,16 +49,14 @@ private:
     
     void OnLineResult(const LineResult::SharedPtr msg);
 
-    inline static constexpr double kStepDeg  = 8.0;
-    inline static constexpr double kRoundUp  = 6.0;
-
-    std::atomic<int>  pending_turns{0};
     std::atomic<bool> line_turn{false};
+    std::atomic<int> turns_remaining_{0};
 
 public:
     Callback(Trajectory *trajectoryPtr, IK_Function *IK_Ptr, Dxl *dxlPtr, Pick *pick_Ptr);
     
 
+    void SetLineTurn(bool on);
     // === ZMP 보정 관련 추가 ===
     void ImuCallback(const sensor_msgs::msg::Imu::SharedPtr msg);
 
@@ -74,7 +72,11 @@ public:
     double startRL_st[6] = { 0.0 };
     double startLL_st[6] = { 0.0 };
 
-
+    int GetTurnsRemaining() const;
+    const void* GetTurnsRemainingAddr() const;
+    
+    int  FetchSubTurnsRemaining(int delta = 1);  // 감소 전 값을 반환
+    void SetTurnsRemaining(int v);
 
     // 모션 제어 함수들
     virtual void SelectMotion(int go); 
@@ -83,7 +85,7 @@ public:
     void Set();
     void ResetMotion();
     void TATA();
-
+    void TATA8();
     //모션 종료 확인 여부
     bool IsMotionFinish();
 
@@ -97,16 +99,16 @@ public:
     int indext = 0;
     int mode = 0;                   
     int index_angle = 0;
-    int turncount = 0;
     int angle = 0;
 
-
+    // double turncount = 0;
+    // double line_angle_ = 0;
     double step = 0;
     double RL_th2 = 0, LL_th2 = 0;
     double RL_th1 = 0, LL_th1 = 0;
     double HS = 0;  
     double SR = 0; 
-    double extra_angle = 0;
+    // double extra_angle = 0;
     double turn_angle = 0;    
 
     VectorXd All_Theta = MatrixXd::Zero(NUMBER_OF_DYNAMIXELS, 1);

@@ -8,7 +8,7 @@
 
 // #include "robot_msgs/msg/motion_end.hpp"  //motion end 불러오기
 
-
+#include <atomic> 
 #include <chrono>
 #include <memory>
 #include <cstdio>    // For FILE*
@@ -71,10 +71,9 @@ public:
 
 private:
 
-
+    std::atomic<int> turns_remaining_{0};
     bool motion_in_progress_ = false;                              // 현재 모션 실행 중인지 여부
     int  current_go_ = 0;
-    bool plan_needs_build_ = false;
     rclcpp::TimerBase::SharedPtr motion_loop_timer_;       // 반복 제어용 타이머
 
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr start_pub_;
@@ -91,20 +90,20 @@ private:
             return;
         }
         
-        int go_ = 0;
+        int command_ = 0;
         switch (msg->command) 
         {
-            case 1: go_ = 1; break;              // 직진
+            case 1: command_ = 1; break;              // 직진
 
-            case 2: go_ = 2; break;              // 우회전
+            case 2: command_ = 2; break;              // 우회전
 
-            case 3: go_ = 3; break;              // 좌회전
+            case 3: command_ = 3; break;              // 좌회전
 
-            case 4: go_ = 4; break;              // BACK
+            case 4: command_ = 4; break;              // BACK
 
-            case 5: go_ = 5; break;              // BACK_HALF
+            case 5: command_ = 5; break;              // BACK_HALF
 
-            case 6: go_ = 6; break;              // FORWARD_HALF
+            case 6: command_ = 6; break;              // FORWARD_HALF
 
             case 7: // Pick
                 if (ball_catch_) 
@@ -112,11 +111,11 @@ private:
                     RCLCPP_WARN(this->get_logger(), "[PICK] 이미 공 보유 → 무시"); 
                     return; 
                 }
-                go_ = 7; 
+                command_ = 7; 
                 ball_catch_ = true; 
                 break;
                 
-            case 8: go_ = 8; break;              // Hurdle
+            case 8: command_ = 8; break;              // Hurdle
 
             case 9: // Shoot
                 if (!ball_catch_) 
@@ -124,24 +123,24 @@ private:
                     RCLCPP_WARN(this->get_logger(), "[SHOOT] 공 없음 → 무시"); 
                     return; 
                 }
-                go_ = 9; 
+                command_ = 9; 
                 ball_catch_ = false; 
                 break;
 
-            case 77: // RECOVERY (즉시 처리 그대로 유지)
-                RCLCPP_INFO(this->get_logger(), "[RECOVERY] 명령 수신");
-                callback_->SelectMotion(77);
-                callback_->Set();
-                dxl_->MoveToTargetSmoothCos(callback_->All_Theta, 150, 10);
-                return;
+            // case 77: // RECOVERY (즉시 처리 그대로 유지)
+            //     RCLCPP_INFO(this->get_logger(), "[RECOVERY] 명령 수신");
+            //     callback_->SelectMotion(77);
+            //     callback_->Set();
+            //     dxl_->MoveToTargetSmoothCos(callback_->All_Theta, 150, 10);
+            //     return;
 
-            case 99: // STOP (즉시 처리 그대로 유지)
-                RCLCPP_INFO(this->get_logger(), "[STOP] 명령 수신");
-                callback_->Set();
-                dxl_->MoveToTargetSmoothCos(callback_->All_Theta, 150, 10);
-                callback_->ResetMotion();
-                RCLCPP_INFO(this->get_logger(), "[MotionEnd] 모션 종료 메시지 전송");
-                return;
+            // case 999: // STOP (즉시 처리 그대로 유지)
+            //     RCLCPP_INFO(this->get_logger(), "[STOP] 명령 수신");
+            //     callback_->Set();
+            //     dxl_->MoveToTargetSmoothCos(callback_->All_Theta, 150, 10);
+            //     callback_->ResetMotion();
+            //     RCLCPP_INFO(this->get_logger(), "[MotionEnd] 모션 종료 메시지 전송");
+            //     return;
 
             default:
                 RCLCPP_WARN(this->get_logger(), "정의되지 않은 command=%d", msg->command);
@@ -149,8 +148,13 @@ private:
         }
 
         // === 여기서는 '무엇을 할지'만 기록하고 루프 첫 틱에서 계획 생성 ===
-        current_go_ = go_;
-        plan_needs_build_ = true;
+        current_go_ = command_;
+
+        if (current_go_ == 2 || current_go_ == 3) {
+        callback_->SetLineTurn(true);     // ← 여기서 먼저 켜두기!
+        // callback_->line_turn = true;
+        callback_->ResetMotion();        // re=0, indext=0, (index_angle=0 권장)
+        }   
 
         motion_in_progress_ = true;
         motion_loop_timer_->reset();
@@ -166,6 +170,15 @@ private:
             return;
         }
 
+        RCLCPP_INFO(this->get_logger(),
+        "[MotionLoop] pre: MAIN.turns=%d @%p | CB.turns=%d @%p",
+        turns_remaining_.load(std::memory_order_seq_cst),
+        static_cast<const void*>(&turns_remaining_),
+        callback_->GetTurnsRemaining(),
+        callback_->GetTurnsRemainingAddr()
+        );
+
+
         callback_->SelectMotion(current_go_);
         callback_->TATA();
         callback_->Write_All_Theta();                      // 현재 프레임의 목표 각도 계산
@@ -175,7 +188,34 @@ private:
         // 모션 종료 판단
         if (callback_->IsMotionFinish())
         {
+            //current_go_가 2나 3이면 true
+            const bool is_turn = (current_go_ == 2 || current_go_ == 3);
+            if (is_turn){
 
+                int prev  = callback_->FetchSubTurnsRemaining(1);   // turn_remaing 1 감소 시키고 감소 전의 값을 prev에 저장
+                int after = prev - 1; //로그 확인용
+
+                RCLCPP_INFO(this->get_logger(),
+                    "[MotionLoop] FINISH: CB.prev=%d -> after=%d @%p",
+                    prev, after, callback_->GetTurnsRemainingAddr()
+                );
+ 
+                if (prev > 1) {
+                    RCLCPP_INFO(this->get_logger(), "[MotionLoop] next unit turn → ResetMotion()");
+                    callback_->ResetMotion();
+                    return; // 타이머 유지 
+                }
+                else if (prev <= 0) {
+                    // 언더플로 방지(혹시 seed 안 됐거나 중복 감소 시)
+                    RCLCPP_WARN(this->get_logger(),
+                        "[MotionLoop] UNDERFLOW: CB.turns was %d — force 0", prev);
+                    callback_->SetTurnsRemaining(0);
+                    // 아래로 내려가 종료 처리
+                }
+                // prev == 1 → 지금 마지막 턴이 막 끝남 → 종료 처리로 이동
+            }
+
+            callback_->SetTurnsRemaining(0);   //turn_remaing을 0으로 초기화
             motion_in_progress_ = false;                   // 상태 초기화
             motion_loop_timer_->cancel();                  // 타이머 중지
             current_go_ = 0;
