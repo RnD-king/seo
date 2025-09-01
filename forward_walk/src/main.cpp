@@ -95,9 +95,9 @@ private:
         {
             case 1: command_ = 1; break;              // 직진
 
-            case 2: command_ = 2; break;              // 우회전
+            case 2: command_ = 2; break;              // 좌회전
 
-            case 3: command_ = 3; break;              // 좌회전
+            case 3: command_ = 3; break;              // 우회전
 
             case 4: command_ = 4; break;              // BACK
 
@@ -105,27 +105,32 @@ private:
 
             case 6: command_ = 6; break;              // FORWARD_HALF
 
-            case 7: // Pick
+            case 7: command_ = 7; break;              // FORWARD_LEFT
+
+            case 8: command_ = 8; break;              // FORWARD_RIGHT
+
+            case 9: // Pick
                 if (ball_catch_) 
                 { 
                     RCLCPP_WARN(this->get_logger(), "[PICK] 이미 공 보유 → 무시"); 
                     return; 
                 }
-                command_ = 7; 
+                command_ = 9; 
                 ball_catch_ = true; 
                 break;
-                
-            case 8: command_ = 8; break;              // Hurdle
 
-            case 9: // Shoot
+            case 10: // Shoot
                 if (!ball_catch_) 
                 { 
                     RCLCPP_WARN(this->get_logger(), "[SHOOT] 공 없음 → 무시"); 
                     return; 
                 }
-                command_ = 9; 
+                command_ = 10; 
                 ball_catch_ = false; 
                 break;
+
+            case 11: command_ = 11; break;              // Hurdle
+
 
             // case 77: // RECOVERY (즉시 처리 그대로 유지)
             //     RCLCPP_INFO(this->get_logger(), "[RECOVERY] 명령 수신");

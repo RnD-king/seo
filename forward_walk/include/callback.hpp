@@ -85,7 +85,6 @@ public:
     void Set();
     void ResetMotion();
     void TATA();
-    void TATA8();
     //모션 종료 확인 여부
     bool IsMotionFinish();
 
@@ -101,14 +100,12 @@ public:
     int index_angle = 0;
     int angle = 0;
 
-    // double turncount = 0;
-    // double line_angle_ = 0;
+
     double step = 0;
     double RL_th2 = 0, LL_th2 = 0;
     double RL_th1 = 0, LL_th1 = 0;
     double HS = 0;  
     double SR = 0; 
-    // double extra_angle = 0;
     double turn_angle = 0;    
 
     VectorXd All_Theta = MatrixXd::Zero(NUMBER_OF_DYNAMIXELS, 1);

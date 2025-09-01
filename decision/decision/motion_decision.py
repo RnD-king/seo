@@ -4,17 +4,19 @@ from robot_msgs.msg import MotionCommand, LineResult, FallResult, MotionEnd
 from rclpy.node import Node
 
 class Motion:
-    FORWARD = 1 
+    FORWARD = 1
     TURN_LEFT = 2
     TURN_RIGHT = 3
     BACK = 4
     BACK_HALF = 5
     FORWARD_HALF = 6
-    PICK = 7
-    HURDLE = 8
-    SHOOT = 9
+    FORWARD_LEFT = 7
+    FORWARD_RIGHT = 8
+    PICK = 9
+    SHOOT = 10
+    HURDLE = 11
     RECOVERY = 77
-    STOP = 99
+    STOP = 999
 
 class MotionDecision(Node):
     def __init__(self):
@@ -92,57 +94,51 @@ class MotionDecision(Node):
   
         if self.fall_detect:
             motion_msg.command = Motion.STOP
-            motion_msg.detail = "Test: STOP"
 
         elif self.res == 1:
             motion_msg.command = Motion.FORWARD
-            motion_msg.detail = "Test: Moving forward"
 
         elif self.res == 2:
             motion_msg.command = Motion.TURN_LEFT
-            motion_msg.detail = "Test: Moving Turn Left"
         
         elif self.res == 3:
             motion_msg.command = Motion.TURN_RIGHT
-            motion_msg.detail = "Test: Moving Turn Right"
         
         elif self.res == 4:   
             motion_msg.command = Motion.BACK
-            motion_msg.detail = "Test: BACK Motion"
 
         elif self.res == 5:   
             motion_msg.command = Motion.BACK_HALF
-            motion_msg.detail = "Test: BACK HALF Motion"
 
         elif self.res == 6:   
             motion_msg.command = Motion.FORWARD_HALF
-            motion_msg.detail = "Test: FORWARD HALF Motion"
 
         elif self.res == 7:
-            motion_msg.command = Motion.PICK
-            motion_msg.detail = "Test: Pick Motion"
+            motion_msg.command = Motion.FORWARD_LEFT
 
         elif self.res == 8:
-            motion_msg.command = Motion.HURDLE
-            motion_msg.detail = "Test: Hurdle Motion"
+            motion_msg.command = Motion.FORWARD_RIGHT
 
         elif self.res == 9:
+            motion_msg.command = Motion.PICK
+
+        elif self.res == 10:
             motion_msg.command = Motion.SHOOT
-            motion_msg.detail = "Test: Shoot Motion"
+
+        elif self.res == 11:
+            motion_msg.command = Motion.HURDLE
 
         elif self.res == 77:
             motion_msg.command = Motion.RECOVERY
-            motion_msg.detail = "Test: RECOVERY Motion"
 
-        elif self.res == 99:
+        elif self.res == 999:
             motion_msg.command = Motion.STOP
-            motion_msg.detail = "Test: STOP Motion"
 
         # # 명령 보내면 다시 false로 변환
         # self.motion_end_detect = False          
 
         self.motion_publish.publish(motion_msg)
-        self.get_logger().info(f"Published motion command: {motion_msg.detail}")
+        self.get_logger().info(f"Published motion command: {motion_msg.command}")
 
 def main(args=None):
     rclpy.init(args=args)
