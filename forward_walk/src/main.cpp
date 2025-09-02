@@ -5,7 +5,7 @@
 #include "BRP_Kinematics.hpp"
 #include "NewPattern2.hpp"     // 사용자 정의: 보행 궤적 생성기
 #include "robot_msgs/msg/motion_command.hpp"  //motion command 불러오기
-
+#include "robot_msgs/msg/motion_end.hpp"  //motion end 불러오기
 // #include "robot_msgs/msg/motion_end.hpp"  //motion end 불러오기
 
 #include <atomic> 
@@ -46,6 +46,9 @@ public:
         // /START 퍼블리셔 생성
         start_pub_ = this->create_publisher<std_msgs::msg::Bool>("/START", 10);
 
+        // motion_end 퍼블리셔 생성
+        motion_end_pub_ = this->create_publisher<robot_msgs::msg::MotionEnd>("/motion_end", 10);
+
         // 타이머를 이용해 1.5초 후 /START 메시지 전송
         start_timer_ = this->create_wall_timer(
             std::chrono::milliseconds(1500),
@@ -62,6 +65,8 @@ public:
             "/motion_command", 10, std::bind(&MainNode::MotionCallback, this, std::placeholders::_1));
 
 
+
+
         // 100Hz 루프 타이머 생성 (처음엔 중단 상태)
         motion_loop_timer_ = this->create_wall_timer(
             10ms, std::bind(&MainNode::MotionLoop, this));
@@ -71,11 +76,13 @@ public:
 
 private:
 
+    bool motion_end_ = false;
     std::atomic<int> turns_remaining_{0};
     bool motion_in_progress_ = false;                              // 현재 모션 실행 중인지 여부
     int  current_go_ = 0;
     rclcpp::TimerBase::SharedPtr motion_loop_timer_;       // 반복 제어용 타이머
 
+    rclcpp::Publisher<robot_msgs::msg::MotionEnd>::SharedPtr motion_end_pub_;
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr start_pub_;
     rclcpp::TimerBase::SharedPtr start_timer_;
 
@@ -219,6 +226,12 @@ private:
                 }
                 // prev == 1 → 지금 마지막 턴이 막 끝남 → 종료 처리로 이동
             }
+
+            robot_msgs::msg::MotionEnd end_msg;
+            end_msg.motion_end_detect = true;
+            motion_end_pub_->publish(end_msg);
+            RCLCPP_INFO(this->get_logger(),
+                    "motion_end publish = %d", end_msg.motion_end_detect);
 
             callback_->SetTurnsRemaining(0);   //turn_remaing을 0으로 초기화
             motion_in_progress_ = false;                   // 상태 초기화

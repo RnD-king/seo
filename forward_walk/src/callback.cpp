@@ -254,7 +254,7 @@ void Callback::SelectMotion(int go)
             trajectoryPtr->Change_Freq(2);
             // mode = Motion_Index::Step_in_place;
             IK_Ptr->Change_Com_Height(30);
-            trajectoryPtr->Freq_Change_Straight(0.05, 0.4, 0.05, 1);
+            trajectoryPtr->Freq_Change_Straight(0.05, 0.2, 0.05, 1);
             IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
             IK_Ptr->Change_Angle_Compensation(2, 2, 0, -2, 2, 2, 0, -2);   
             IK_Ptr->Set_Angle_Compensation(67);
