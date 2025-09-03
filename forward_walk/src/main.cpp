@@ -6,7 +6,8 @@
 #include "NewPattern2.hpp"     // 사용자 정의: 보행 궤적 생성기
 #include "robot_msgs/msg/motion_command.hpp"  //motion command 불러오기
 #include "robot_msgs/msg/motion_end.hpp"  //motion end 불러오기
-// #include "robot_msgs/msg/motion_end.hpp"  //motion end 불러오기
+
+
 
 #include <atomic> 
 #include <chrono>
@@ -65,8 +66,6 @@ public:
             "/motion_command", 10, std::bind(&MainNode::MotionCallback, this, std::placeholders::_1));
 
 
-
-
         // 100Hz 루프 타이머 생성 (처음엔 중단 상태)
         motion_loop_timer_ = this->create_wall_timer(
             10ms, std::bind(&MainNode::MotionLoop, this));
@@ -76,7 +75,7 @@ public:
 
 private:
 
-    bool motion_end_ = false;
+    
     std::atomic<int> turns_remaining_{0};
     bool motion_in_progress_ = false;                              // 현재 모션 실행 중인지 여부
     int  current_go_ = 0;
@@ -87,12 +86,24 @@ private:
     rclcpp::TimerBase::SharedPtr start_timer_;
 
     bool ball_catch_ = false;  // 공 잡았는지 확인용 
+    bool out_turn_end = false; // out일때 회전 했는지
 
 
     void MotionCallback(const robot_msgs::msg::MotionCommand::SharedPtr msg)        
     {
 
         if (motion_in_progress_) {
+
+            if(msg->command == 99){
+                RCLCPP_INFO(this->get_logger(), "[STOP] 명령 수신");
+                callback_->Set();
+                dxl_->MoveToTargetSmoothCos(callback_->All_Theta, 150, 10);
+                callback_->ResetMotion();
+                RCLCPP_INFO(this->get_logger(), "[MotionEnd] 모션 종료 메시지 전송");
+                motion_in_progress_ = false;
+                return;
+            }
+
             RCLCPP_WARN(this->get_logger(), "동작 중: 명령 무시됨");
             return;
         }
@@ -138,6 +149,24 @@ private:
 
             case 11: command_ = 11; break;              // Hurdle
 
+            case 12: command_ = 12; break;  // 1step
+
+            // case 13: 
+            //     if (out_turn_end)
+            //     {
+            //         RCLCPP_WARN(this->get_logger(), "이미 turn함"); 
+            //         return; 
+            //     }
+            //     command_ = 13; break;  // out일때 좌회전 + 1step
+        
+            // case 14: 
+            //     if (out_turn_end)
+            //     {
+            //         RCLCPP_WARN(this->get_logger(), "이미 turn함"); 
+            //         return; 
+            //     }
+            //     command_ = 14; break;  // out일때 우회전 + 1step
+        
 
             // case 77: // RECOVERY (즉시 처리 그대로 유지)
             //     RCLCPP_INFO(this->get_logger(), "[RECOVERY] 명령 수신");
@@ -146,7 +175,7 @@ private:
             //     dxl_->MoveToTargetSmoothCos(callback_->All_Theta, 150, 10);
             //     return;
 
-            // case 999: // STOP (즉시 처리 그대로 유지)
+            // case 99: // STOP (즉시 처리 그대로 유지)
             //     RCLCPP_INFO(this->get_logger(), "[STOP] 명령 수신");
             //     callback_->Set();
             //     dxl_->MoveToTargetSmoothCos(callback_->All_Theta, 150, 10);
@@ -226,6 +255,7 @@ private:
                 }
                 // prev == 1 → 지금 마지막 턴이 막 끝남 → 종료 처리로 이동
             }
+
 
             robot_msgs::msg::MotionEnd end_msg;
             end_msg.motion_end_detect = true;
