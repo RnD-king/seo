@@ -4,7 +4,7 @@ from robot_msgs.msg import MotionCommand, LineResult, FallResult, MotionEnd
 from rclpy.node import Node
 
 class Motion:
-    FORWARD = 1
+    FORWARD_FOUR = 1
     TURN_LEFT = 2
     TURN_RIGHT = 3
     BACK = 4
@@ -15,6 +15,9 @@ class Motion:
     PICK = 9
     SHOOT = 10
     HURDLE = 11
+    FORWARD_ONE = 12
+    Out_Right = 13
+    Out_Left = 14
     RECOVERY = 77
     STOP = 999
 
@@ -96,7 +99,7 @@ class MotionDecision(Node):
             motion_msg.command = Motion.STOP
 
         elif self.res == 1:
-            motion_msg.command = Motion.FORWARD
+            motion_msg.command = Motion.FORWARD_FOUR
 
         elif self.res == 2:
             motion_msg.command = Motion.TURN_LEFT
@@ -128,10 +131,19 @@ class MotionDecision(Node):
         elif self.res == 11:
             motion_msg.command = Motion.HURDLE
 
+        elif self.res == 12:
+            motion_msg.command = Motion.FORWARD_ONE
+
+        elif self.res == 13:
+            motion_msg.command = Motion.Out_Right # 왼쪽으로 돌고 1step
+            
+        elif self.res == 14:
+            motion_msg.command = Motion.Out_Left # 오른쪽으로 돌고 1step
+
         elif self.res == 77:
             motion_msg.command = Motion.RECOVERY
 
-        elif self.res == 999:
+        elif self.res == 99:
             motion_msg.command = Motion.STOP
 
         # # 명령 보내면 다시 false로 변환
