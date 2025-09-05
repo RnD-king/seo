@@ -90,6 +90,7 @@ private:
 
     void MotionCallback(const robot_msgs::msg::MotionCommand::SharedPtr msg)        
     {
+        RCLCPP_INFO(this->get_logger(), "command=%d, angle=%d", msg->command,msg->angle);
 
         if (motion_in_progress_) {
 
