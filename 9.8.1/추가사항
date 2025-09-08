@@ -1,0 +1,5 @@
+1. motion command == 15 추가 (Re_catch)
+2. MotionEnd.msg에 pick_end 추가
+3. motion_decision에 pick_end를 받아와 공 pick이 완료되면 ball_detect = False로 라인 감지 다시 시작
+4. pick(command = 9)이후 Re_catch 바로 동작하게 
+5. Re_catch이후 강제 회전 넣음 (공 잡은후 제자리에서 도는 방법 or 뒤로 걸어가서 라인 보는 방법 중 첫번째)
