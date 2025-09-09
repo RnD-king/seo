@@ -1,0 +1,4 @@
+1. shoot, pick 모션 추가
+2. Newpattern에 zsimulation_standup_Shoot_FINISH 추가
+3. pick_mode, shoot_mode 시퀀스 추가
+4. 첫 모션, 마지막 모션 일치 삭제 
