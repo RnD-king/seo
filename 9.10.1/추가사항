@@ -1,0 +1,3 @@
+1. callback.cpp에 imu/data 관련 다 삭제
+2. 초기 자세 마지막 자세 일치 삭제
+3. motion_end대신 motion_during으로 바꿔서 할 생각 이건 건우랑 의논
