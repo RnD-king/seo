@@ -1,0 +1,4 @@
+1. BallResult에 angle과 ball_catch 추가
+2. pick_mode에 ball_catch를 추가
+3. main에 BallResult 토픽 sub
+4. shoot_mode에 일단 강제회전 추가 
