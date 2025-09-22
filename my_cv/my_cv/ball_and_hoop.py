@@ -23,18 +23,15 @@ roi_x_end = int(camera_width * 5 // 5)
 roi_y_start = int(camera_height * 1 // 12)
 roi_y_end = int(camera_height * 11 // 12)
 
+zandi_x = int((roi_x_start + roi_x_end) / 2)
+zandi_y = int((roi_y_start + roi_y_end) / 2)
+
+pick_x = zandi_x - 5
+pick_y = zandi_y + 47 
+
 class LineListenerNode(Node): #################################################################### 판단 프레임 수 바꿀 때 yolo_cpp 도 고려해라~~~
     def __init__(self):
         super().__init__('line_subscriber')
-
-        # zandi
-        self.zandi_x = int((roi_x_start + roi_x_end) / 2)
-        self.zandi_y = int((roi_y_start + roi_y_end) / 2)
-
-        # pick
-        self.pick_x = self.zandi_x - 5
-        self.pick_y = self.zandi_y + 47 
-        self.pick_rad = 20
 
         # 타이머
         self.frame_count = 0
@@ -70,9 +67,6 @@ class LineListenerNode(Node): ##################################################
         self.cx_intr, self.cy_intr = 325.5, 239.4
 
         self.last_band_mask = np.zeros((roi_y_end - roi_y_start, roi_x_end - roi_x_start), dtype = np.uint8)
-
-        self.lower_hsv_ball = np.array([8, 60, 60])
-        self.upper_hsv_ball = np.array([60, 255, 255]) # 주황색 기준으로
         
         self.depth_max_ball = 1500.0  # mm 기준 마스크 거리
         self.depth_max_hoop = 2000.0
@@ -126,17 +120,16 @@ class LineListenerNode(Node): ##################################################
         
         # 퍼블리셔
         self.ball_result_pub = self.create_publisher(BallResult, '/ball_result', 10)
-        # self.hoop_result_pub = self.create_publisher(HoopResult, '/hoop_result', 10)
-        
+
         # 파라미터 선언 B
         self.declare_parameter("cam_mode", CAM1)
         self.declare_parameter("cam1_mode", BALL)
 
         self.declare_parameter("orange_h_low", 0) 
         self.declare_parameter("orange_h_high", 60)  
-        self.declare_parameter("orange_s_low", 40)  
+        self.declare_parameter("orange_s_low", 40) # 채도  
         self.declare_parameter("orange_s_high", 255)  
-        self.declare_parameter("orange_v_low", 60)  
+        self.declare_parameter("orange_v_low", 60) # 밝기
         self.declare_parameter("orange_v_high", 255)
 
         # 파라미터 선언 H
@@ -147,8 +140,8 @@ class LineListenerNode(Node): ##################################################
         self.declare_parameter('red_s_low', 80)
         self.declare_parameter('red_v_low', 60)
         
-        self.declare_parameter('white_s_high', 255) # 하양 70. 190
-        self.declare_parameter('white_v_low', 0)
+        self.declare_parameter('white_s_high', 130) # 하양 70. 190
+        self.declare_parameter('white_v_low', 130)
 
         self.declare_parameter('band_top_ratio', 0.15)   # 백보드 h x 0.15
         self.declare_parameter('band_side_ratio', 0.10)   # w x 0.10
@@ -243,7 +236,7 @@ class LineListenerNode(Node): ##################################################
         patch = self.hsv[y0:y1, x0:x1].reshape(-1,3)
 
         H, S, V = np.mean(patch, axis=0).astype(int)
-        self.get_logger().info(f"[Pos] x={x - self.zandi_x}, y={-(y - self.zandi_y)} | HSV=({H},{S},{V})")
+        self.get_logger().info(f"[Pos] x={x - zandi_x}, y={-(y - zandi_y)} | HSV=({H},{S},{V})")
 
     def motion_callback(self, msg: MotionEnd): # 모션 끝 같이 받아오기 (중복 방지)
         if bool(msg.motion_end_detect):
@@ -403,7 +396,7 @@ class LineListenerNode(Node): ##################################################
                         avg_cy = int(round(np.mean(cys)))
                         avg_dis = np.mean(dists)
 
-                        angle = int(round(math.degrees(math.atan2(avg_cx - self.zandi_x, -avg_cy + 380))))
+                        angle = int(round(math.degrees(math.atan2(avg_cx - zandi_x, -avg_cy + 380))))
                         self.last_agv_cy_ball = avg_cy # 다음 프레임에 판단용
 
                         if angle > 90:
@@ -948,7 +941,7 @@ class LineListenerNode(Node): ##################################################
             self.get_logger().info(f"[Ball] CAM2 Found, Relative position: {dx}, {-dy} | "
                             f"frames= {len(self.ball_valid_list)}, "
                             f"wall= {process_time*1000:.1f} ms")
-            res = 99 
+            res = 5 
         return res
 
     def cam2_image_callback(self, cam2_color_msg: Image): # cam1, cam2 분리하기
@@ -1150,7 +1143,7 @@ class LineListenerNode(Node): ##################################################
 
                             if self.cam2_miss_count >= 5: # 한 번 봐놓고 공을 5번 연속이나 못 보면 뭐할까?  >>>  뭔가 찾는 모션
                                 self.get_logger().info(f"[Ball] I totally missed,,,")
-                                res = 99
+                                res = 5
                                 self.last_position_text = f""
                             
                             else: # 한번만 다시 봐봐
