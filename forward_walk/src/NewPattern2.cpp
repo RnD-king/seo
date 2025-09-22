@@ -473,7 +473,9 @@ void Trajectory::Huddle_Motion(double step, double height, double COM_h)
 void Trajectory::Side_Left1(double step)
 {
 	Set_step(step);
-	MatrixXd Ycom = YComSimulation_Sidewalk_half(-L0, -L0, L0 + step, L0 - step);
+	double aaa=0.054;
+	// MatrixXd Ycom = YComSimulation_Sidewalk_half(-L0, -L0, L0 + step, L0 - step);
+	MatrixXd Ycom = YComSimulation_Sidewalk_half(-aaa, -aaa,  aaa + step, aaa - step);
 	MatrixXd LF_yFoot = LF_ysimulation_leftwalk_halfstep();
 	MatrixXd RF_yFoot = RF_ysimulation_leftwalk_halfstep();
 	Ref_RL_x = MatrixXd::Zero(1, sim_n);
@@ -487,7 +489,9 @@ void Trajectory::Side_Left1(double step)
 void Trajectory::Side_Right1(double step)
 {
 	Set_step(-step);
-	MatrixXd Ycom = YComSimulation_Sidewalk_half(L0, L0, - L0 - step, -L0 + step);
+	double aaa=0.05;
+	// MatrixXd Ycom = YComSimulation_Sidewalk_half(L0, L0, - L0 - step, -L0 + step);
+	MatrixXd Ycom = YComSimulation_Sidewalk_half(aaa, aaa, - aaa - step, -aaa + step);
 	MatrixXd LF_yFoot = LF_ysimulation_rightwalk_halfstep();
 	MatrixXd RF_yFoot = RF_ysimulation_rightwalk_halfstep();
 	Ref_RL_x = MatrixXd::Zero(1, sim_n);
@@ -497,6 +501,7 @@ void Trajectory::Side_Right1(double step)
 	Ref_RL_z = RF_zsimulation_rightwalk_halfstep();
 	Ref_LL_z = LF_zsimulation_rightwalk_halfstep();
 }
+
 
 void Trajectory::Go_Straight(double step, double distance, double height)
 {
@@ -623,6 +628,32 @@ void Trajectory::Go_Back_Straight(double step, double distance, double height)
 	Ref_LL_z = LF_zsimulation_straightwalk(height);
 }
 
+void Trajectory::Go_Back_Straight2(double step, double distance, double height)
+{
+	Set_step(step);
+	Set_distance_back(distance);
+	double sim_all = sim_n*2 + 100;
+	Xcom = XComSimulation();
+	Ycom = YComSimulation();
+
+	MatrixXd Ref_RL_x_t = MatrixXd::Zero(1, 100);
+	MatrixXd Ref_LL_x_t = MatrixXd::Zero(1, 100);
+	MatrixXd Ref_RL_y_t = -L0 * MatrixXd::Ones(1, 100);
+	MatrixXd Ref_LL_y_t = L0 * MatrixXd::Ones(1, 100);
+	MatrixXd Ref_RL_z_t = MatrixXd::Zero(1, 100);
+	MatrixXd Ref_LL_z_t = MatrixXd::Zero(1, 100);
+
+	LF_xFoot = LF_xsimulation_straightwalk();
+	RF_xFoot = RF_xsimulation_straightwalk();
+	RF_yFoot = -L0 * MatrixXd::Ones(1, sim_n);
+	LF_yFoot = L0 * MatrixXd::Ones(1, sim_n);
+	Ref_RL_x = RF_xFoot - Xcom;
+	Ref_LL_x = LF_xFoot - Xcom;
+	Ref_RL_y = RF_yFoot - Ycom;
+	Ref_LL_y = LF_yFoot - Ycom;
+	Ref_RL_z = RF_zsimulation_straightwalk(height);
+	Ref_LL_z = LF_zsimulation_straightwalk(height);
+}
 
 
 
@@ -1440,6 +1471,7 @@ MatrixXd Trajectory::Huddle_Xcom()
 	return XCom_;
 }
 
+
 MatrixXd Trajectory::Huddle_Ycom()
 {
 	sim_n = walktime_n * 6;
@@ -1453,9 +1485,9 @@ MatrixXd Trajectory::Huddle_Ycom()
 	for (int i = 0; i < sim_n + 19; i++)
 	{
 		if (i < 0.75 * float_walktime_n) zmp_ref[i] = 0;
-		else if (i < 1.75 * float_walktime_n) zmp_ref[i] = -0.05;
-		else if (i < 4.5 * float_walktime_n) zmp_ref[i] = 0.063;
-		else if (i < 5.7 * float_walktime_n) zmp_ref[i] = -0.053;
+		else if (i < 1.75 * float_walktime_n) zmp_ref[i] = -0.06;
+		else if (i < 4.5 * float_walktime_n) zmp_ref[i] = 0.06;
+		else if (i < 5.7 * float_walktime_n) zmp_ref[i] = -0.06;
 		else zmp_ref[i] = 0.0;
 	}
 

@@ -282,13 +282,13 @@ void Callback::SelectMotion(int go)
             trajectoryPtr->Change_Freq(2);
             // mode = Motion_Index::Back_2step;
             IK_Ptr->Change_Com_Height(30);
-            trajectoryPtr->Go_Back_Straight(-0.04, -0.2, 0.05);
-            IK_Ptr->Change_Angle_Compensation(2, 2, 0, -2, 2, 2, 0, -2); 
+            trajectoryPtr->Go_Back_Straight(-0.04, -0.18, 0.05);
+            IK_Ptr->Change_Angle_Compensation(3, 4, 2, 0, 2, 2, 2, -4); 
             IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
             IK_Ptr->Set_Angle_Compensation(135);
         }
 
-        else if(go == 5)//Back_Halfstep
+        else if(go == 5  || go == 22)//Back_Halfstep
         {
             re = 1;
             indext = 0;
@@ -297,7 +297,7 @@ void Callback::SelectMotion(int go)
             // mode = Motion_Index::Back_Halfstep;
             IK_Ptr->Change_Com_Height(30);
             trajectoryPtr->Go_Back_Straight(-0.04, -0.1, 0.05);
-            IK_Ptr->Change_Angle_Compensation(2, 2, 0, -2, 2, 2, 0, -2); 
+            IK_Ptr->Change_Angle_Compensation(3, 4, 2, 0, 2, 2, 2, -4);
             IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
             IK_Ptr->Set_Angle_Compensation(135);
         }
@@ -315,6 +315,38 @@ void Callback::SelectMotion(int go)
             IK_Ptr->Change_Angle_Compensation(2, 2, 0, -2, 2, 2, 0, -2); 
             IK_Ptr->Set_Angle_Compensation(135);
         }
+
+        else if(go == 7)//Left_Halfstep
+        {
+            re = 1;
+            indext = 0;
+
+            trajectoryPtr->Change_Freq(2);
+            // mode = Motion_Index::Left_Halfstep;
+            IK_Ptr->Change_Com_Height(30);
+            trajectoryPtr->Side_Left1(0.027);
+            IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
+            // IK_Ptr->Change_Angle_Compensation(2, 4, -4, 0, 2, 7, 4, -8);
+            IK_Ptr->Change_Angle_Compensation(2, 7, -4, 0, 2, 7, 4, -8);
+            IK_Ptr->Set_Angle_Compensation(135);
+        }
+
+
+        else if(go == 8)//Right_Halfstep
+        {
+             re = 1;
+            indext = 0;
+
+            trajectoryPtr->Change_Freq(2);
+            // mode = Motion_Index::Right_Halfstep;
+            IK_Ptr->Change_Com_Height(30);
+            trajectoryPtr->Side_Right1(0.025);
+            IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
+            IK_Ptr->Change_Angle_Compensation(2, 7, 4, -8, 2, 4, -4, 4);
+            // IK_Ptr->Change_Angle_Compensation(2, 7, 1, 1, 2, 4, 1, -1);
+            IK_Ptr->Set_Angle_Compensation(135);
+        }
+
 
 
         else if(go == 9 || go == 30)//PickMotion
@@ -375,7 +407,6 @@ void Callback::SelectMotion(int go)
         {
             re = 1;
             indext = 0;
-            angle = 8;
 
             trajectoryPtr->Change_Freq(2);
             IK_Ptr->Change_Com_Height(30);
@@ -385,36 +416,6 @@ void Callback::SelectMotion(int go)
             IK_Ptr->Set_Angle_Compensation(135);
             trajectoryPtr->Stop_Trajectory_straightwalk(0.05);
         }
-
-        else if(go == 15)//Left_Halfstep
-        {
-            re = 1;
-            indext = 0;
-
-            trajectoryPtr->Change_Freq(2);
-            // mode = Motion_Index::Left_Halfstep;
-            IK_Ptr->Change_Com_Height(35);
-            trajectoryPtr->Side_Left1(0.03);
-            IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
-            IK_Ptr->Change_Angle_Compensation(2, 4, -4, 0, 2, 7, 4, -4);
-            IK_Ptr->Set_Angle_Compensation(135);
-        }
-
-
-        else if(go == 16)//Right_Halfstep
-        {
-            re = 1;
-            indext = 0;
-
-            trajectoryPtr->Change_Freq(2);
-            // mode = Motion_Index::Right_Halfstep;
-            IK_Ptr->Change_Com_Height(30);
-            trajectoryPtr->Side_Right1(0.03);
-            IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
-            IK_Ptr->Change_Angle_Compensation(2, 7, 1, 1, 2, 4, 1, -1);
-            IK_Ptr->Set_Angle_Compensation(135);
-        }
-
 
         else if (go == 17) //shoot_ready
         {
@@ -431,7 +432,7 @@ void Callback::SelectMotion(int go)
             trajectoryPtr->Ref_RL_z = MatrixXd::Zero(1, 500);
             trajectoryPtr->Ref_LL_z = MatrixXd::Zero(1, 500);
 
-            pick_Ptr->WT_Trajectory(0,trajectoryPtr->Ref_RL_x.cols());
+            pick_Ptr->WT_Trajectory(-10,trajectoryPtr->Ref_RL_x.cols());
             pick_Ptr->RA_Trajectory(0,0,0,0,trajectoryPtr->Ref_RL_x.cols());
             pick_Ptr->LA_Trajectory(-180,-22,50,-50,trajectoryPtr->Ref_RL_x.cols());
             pick_Ptr->NC_Trajectory(0,0,trajectoryPtr->Ref_RL_x.cols());
@@ -471,10 +472,11 @@ void Callback::SelectMotion(int go)
             trajectoryPtr->Ref_RL_z = trajectoryPtr->zsimulation_standup_Shoot_FINISH(500, -0.02);
             trajectoryPtr->Ref_LL_z = trajectoryPtr->zsimulation_standup_Shoot_FINISH(500, -0.02);
 
-            pick_Ptr->WT_Trajectory(20,trajectoryPtr->Ref_RL_x.cols());
+            pick_Ptr->WT_Trajectory(30,trajectoryPtr->Ref_RL_x.cols());
             pick_Ptr->RA_Trajectory(0,0,0,0,trajectoryPtr->Ref_RL_x.cols());
             pick_Ptr->LA_Trajectory(150,22,-110,50,trajectoryPtr->Ref_RL_x.cols());
             pick_Ptr->NC_Trajectory(0,0,trajectoryPtr->Ref_RL_x.cols());
+
 
         }
 
@@ -496,7 +498,7 @@ void Callback::SelectMotion(int go)
 
         }
 
-        else if(go == 22)//Huddle
+        else if(go == 20)//Huddle
         {
             re = 1;
             indext = 0;
@@ -510,6 +512,65 @@ void Callback::SelectMotion(int go)
             IK_Ptr->Set_Angle_Compensation(135);
         }
 
+        else if(go == 21)//Fast_6step
+        {
+            re = 1;
+            indext = 0;
+            angle = 1.5;
+
+
+            trajectoryPtr->Change_Freq(2);
+            // mode = Motion_Index::Step_in_place;
+            IK_Ptr->Change_Com_Height(30);
+            trajectoryPtr->Freq_Change_Straight(0.05, 0.4, 0.05, 1);
+            IK_Ptr->Get_Step_n(trajectoryPtr->Return_Step_n());
+            IK_Ptr->Change_Angle_Compensation(3, 3, -2, 6, 3, 2, 2, -6);   
+            IK_Ptr->Set_Angle_Compensation(67);
+        }
+
+        else if (go == 23) //Up_Nc
+        {
+            re = 1;
+            indext = 0;
+
+
+            trajectoryPtr->Change_Freq(2);
+            IK_Ptr->Change_Com_Height(30);
+            trajectoryPtr->Ref_RL_x = MatrixXd::Zero(1, 500);
+            trajectoryPtr->Ref_LL_x = MatrixXd::Zero(1, 500);
+            trajectoryPtr->Ref_RL_y = -0.06 * MatrixXd::Ones(1, 500);
+            trajectoryPtr->Ref_LL_y = 0.06 * MatrixXd::Ones(1, 500);
+            trajectoryPtr->Ref_RL_z = MatrixXd::Zero(1, 500);
+            trajectoryPtr->Ref_LL_z = MatrixXd::Zero(1, 500);
+
+            pick_Ptr->WT_Trajectory(0,trajectoryPtr->Ref_RL_x.cols());
+            pick_Ptr->RA_Trajectory(0,0,0,0,trajectoryPtr->Ref_RL_x.cols());
+            pick_Ptr->LA_Trajectory(0,0,0,0,trajectoryPtr->Ref_RL_x.cols());
+            pick_Ptr->NC_Trajectory(0,30,trajectoryPtr->Ref_RL_x.cols());
+
+        }
+
+        else if (go == 24) //Down_Nc
+        {
+            re = 1;
+            indext = 0;
+
+
+            trajectoryPtr->Change_Freq(2);
+            IK_Ptr->Change_Com_Height(30);
+            trajectoryPtr->Ref_RL_x = MatrixXd::Zero(1, 500);
+            trajectoryPtr->Ref_LL_x = MatrixXd::Zero(1, 500);
+            trajectoryPtr->Ref_RL_y = -0.06 * MatrixXd::Ones(1, 500);
+            trajectoryPtr->Ref_LL_y = 0.06 * MatrixXd::Ones(1, 500);
+            trajectoryPtr->Ref_RL_z = MatrixXd::Zero(1, 500);
+            trajectoryPtr->Ref_LL_z = MatrixXd::Zero(1, 500);
+
+            pick_Ptr->WT_Trajectory(0,trajectoryPtr->Ref_RL_x.cols());
+            pick_Ptr->RA_Trajectory(0,0,0,0,trajectoryPtr->Ref_RL_x.cols());
+            pick_Ptr->LA_Trajectory(0,0,0,0,trajectoryPtr->Ref_RL_x.cols());
+            pick_Ptr->NC_Trajectory(0,-30,trajectoryPtr->Ref_RL_x.cols());
+
+        }
 
     }
 
@@ -541,7 +602,7 @@ void Callback::Write_All_Theta()
             int go = go_;
             RCLCPP_INFO(rclcpp::get_logger("Callback"), "[Write_All_Theta] indext = %d / step_n = %ld / go = %d", indext, trajectoryPtr->Ref_RL_x.cols(), go);
             
-            if (go == 1 || go == 12) //걷기 4step, 1step
+            if (go == 1 || go == 21) //fast forward 4step, 6step
             {
                 IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
                 IK_Ptr->Fast_Angle_Compensation(indext);
@@ -600,7 +661,7 @@ void Callback::Write_All_Theta()
                 }
             }
 
-            else if (go == 4 || go == 5)//Back_Halfstep //Back_2step
+            else if (go == 4 || go == 5 || go == 22)//Back_Halfstep //Back_2step
             {
                 IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
                 IK_Ptr->Angle_Compensation(indext, trajectoryPtr->Ref_RL_x.cols());
@@ -612,6 +673,18 @@ void Callback::Write_All_Theta()
                 IK_Ptr->Angle_Compensation(indext, trajectoryPtr->Ref_RL_x.cols());
             }
 
+            else if (go == 7)//Left_Halfstep
+            {
+                IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
+                IK_Ptr->Angle_Compensation_Leftwalk(indext);
+            }
+
+            else if (go == 8)//Right_Halfstep
+            {
+                IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
+                IK_Ptr->Angle_Compensation_Rightwalk(indext);
+            }
+            
             else if (go == 9 || go == 30) // Pick
             {
                 IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
@@ -619,24 +692,16 @@ void Callback::Write_All_Theta()
                 pick_Ptr->Picking(trajectoryPtr->Ref_RL_x, indext, RL_th2, LL_th2);
             }
 
-            else if (go == 15)//Left_Halfstep
-            {
-                IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
-                IK_Ptr->Angle_Compensation_Leftwalk(indext);
-            }
-
-            else if (go == 16)//Right_Halfstep
-            {
-                IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
-                IK_Ptr->Angle_Compensation_Rightwalk(indext);
-            }
-
-
-            else if (go == 10 || go == 11 || go == 17 || go == 19) //Re_Catch, Catch_Finish, shoot_ready, shoot_finish
+            else if (go == 10 || go == 11 || go == 17 || go == 19 || go == 24 || go == 23) //Re_Catch, Catch_Finish, shoot_ready, shoot_finish, Up_Nc, Down_Nc
             {
                 IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
                 pick_Ptr->UPBD_SET(pick_Ptr->Ref_WT_th, pick_Ptr->Ref_RA_th, pick_Ptr->Ref_LA_th, pick_Ptr->Ref_NC_th, indext);
 
+            }
+            else if (go == 12) //1step
+            {                
+                IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
+                IK_Ptr->Angle_Compensation(indext, trajectoryPtr->Ref_RL_x.cols());
             }
             
             else if (go == 18) //shoot
@@ -649,7 +714,7 @@ void Callback::Write_All_Theta()
                 pick_Ptr->LA_th[3]  = -50 * DEG2RAD;
             }
 
-            else if(go == 22)//Huddle 1
+            else if(go == 20)//Huddle 1
             {
                 IK_Ptr->BRP_Simulation(trajectoryPtr->Ref_RL_x, trajectoryPtr->Ref_RL_y, trajectoryPtr->Ref_RL_z, trajectoryPtr->Ref_LL_x, trajectoryPtr->Ref_LL_y, trajectoryPtr->Ref_LL_z, indext);
                 IK_Ptr->Angle_Compensation_Huddle(indext);
@@ -679,20 +744,33 @@ void Callback::Write_All_Theta()
 
 
     // All_Theta 계산 및 저장
-    All_Theta[0] = -IK_Ptr->RL_th[0] + pick_Ptr->RL_th_ALL[0] + startRL_st[0] + turnRL_st;
+    All_Theta[0] = -IK_Ptr->RL_th[0] + pick_Ptr->RL_th_ALL[0] + startRL_st[0];
     All_Theta[1] = IK_Ptr->RL_th[1] + pick_Ptr->RL_th_ALL[1] +startRL_st[1] -RL_th1 * DEG2RAD - 3 * DEG2RAD;
     All_Theta[2] = IK_Ptr->RL_th[2] + pick_Ptr->RL_th_ALL[2] +startRL_st[2] -RL_th2 * DEG2RAD - 17 * DEG2RAD; //10.74 right
     All_Theta[3] = -IK_Ptr->RL_th[3] + pick_Ptr->RL_th_ALL[3] +startRL_st[3] + 40 * DEG2RAD; //38.34 * DEG2RAD;   
     All_Theta[4] = -IK_Ptr->RL_th[4] + pick_Ptr->RL_th_ALL[4] +startRL_st[4] + 24.22 * DEG2RAD;
     All_Theta[5] = -IK_Ptr->RL_th[5] + pick_Ptr->RL_th_ALL[5] +startRL_st[5] - 2* DEG2RAD;
 
-    All_Theta[6] = -IK_Ptr->LL_th[0] + pick_Ptr->LL_th_ALL[0] +startLL_st[0] + turnLL_st;
+    All_Theta[6] = -IK_Ptr->LL_th[0] + pick_Ptr->LL_th_ALL[0] +startLL_st[0];
     All_Theta[7] = IK_Ptr->LL_th[1] + pick_Ptr->LL_th_ALL[1] +startLL_st[1] +LL_th1 * DEG2RAD + 2 * DEG2RAD;
     All_Theta[8] = -IK_Ptr->LL_th[2] + pick_Ptr->LL_th_ALL[2] +startLL_st[2] +LL_th2 * DEG2RAD + 17 * DEG2RAD; //left
     All_Theta[9] = IK_Ptr->LL_th[3] + pick_Ptr->LL_th_ALL[3] +startLL_st[3] - 40 * DEG2RAD; //40.34 * DEG2RAD;  
     All_Theta[10] = IK_Ptr->LL_th[4] + pick_Ptr->LL_th_ALL[4] +startLL_st[4] - HS * DEG2RAD - 21.22 * DEG2RAD;
     All_Theta[11] = -IK_Ptr->LL_th[5] + pick_Ptr->LL_th_ALL[5] +startLL_st[5] - 2 * DEG2RAD;
+    // All_Theta 계산 및 저장
+    // All_Theta[0] = -IK_Ptr->RL_th[0] +startRL_st[0] + turnRL_st;
+    // All_Theta[1] = IK_Ptr->RL_th[1] +startRL_st[1] -RL_th1 * DEG2RAD - 3 * DEG2RAD;
+    // All_Theta[2] = IK_Ptr->RL_th[2] +startRL_st[2] -RL_th2 * DEG2RAD - 17 * DEG2RAD; //10.74 right
+    // All_Theta[3] = -IK_Ptr->RL_th[3] +startRL_st[3] + 40 * DEG2RAD; //38.34 * DEG2RAD;   
+    // All_Theta[4] = -IK_Ptr->RL_th[4] +startRL_st[4] + 24.22 * DEG2RAD;
+    // All_Theta[5] = -IK_Ptr->RL_th[5] +startRL_st[5] - 2* DEG2RAD;
 
+    // All_Theta[6] = -IK_Ptr->LL_th[0] +startLL_st[0] + turnLL_st;
+    // All_Theta[7] = IK_Ptr->LL_th[1] +startLL_st[1] +LL_th1 * DEG2RAD + 2 * DEG2RAD;
+    // All_Theta[8] = -IK_Ptr->LL_th[2] +startLL_st[2] +LL_th2 * DEG2RAD + 17 * DEG2RAD; //left
+    // All_Theta[9] = IK_Ptr->LL_th[3] +startLL_st[3] - 40 * DEG2RAD; //40.34 * DEG2RAD;  
+    // All_Theta[10] = IK_Ptr->LL_th[4] +startLL_st[4] - HS * DEG2RAD - 21.22 * DEG2RAD;
+    // All_Theta[11] = -IK_Ptr->LL_th[5] +startLL_st[5] - 2 * DEG2RAD;
 
     // upper_body
     All_Theta[12] = pick_Ptr->WT_th[0] + step + 0 * DEG2RAD;  // waist

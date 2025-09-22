@@ -742,6 +742,7 @@ public:
 	void Go_Straight(double step, double distance, double height);
 	void Go_Straight_start(double step, double distance, double height);
 	void Go_Back_Straight(double step, double distance, double height);
+	void Go_Back_Straight2(double step, double distance, double height);
 	void Go_Back(double step, double distance, double height);
 	void Freq_Change_Straight(double step, double distance, double height, double freq);
 	void Stop_Trajectory_straightwalk(double step);
@@ -1071,8 +1072,8 @@ public:
     double RA_th[4];
     double LA_th[4];
     double NC_th[2];
-	double RL_th_ALL[6];
-    double LL_th_ALL[6];
+	double RL_th_ALL[6] = {0};
+    double LL_th_ALL[6] = {0};
 
 	MatrixXd Ref_WT_th;
     MatrixXd Ref_RA_th;

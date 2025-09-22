@@ -62,12 +62,24 @@ public:
             }
         );
 
+        // 타이머를 이용해 3초 후 MotionEnd 메시지 전송
+        motion_start_timer_ = this->create_wall_timer(
+            std::chrono::milliseconds(20000),
+            [this]() {
+                robot_msgs::msg::MotionEnd msg;
+                msg.motion_end_detect = true;
+                motion_end_pub_->publish(msg);
+                RCLCPP_INFO(this->get_logger(), "MotionEnd 1회 퍼블리쉬");
+                motion_start_timer_->cancel();  // 한 번만 실행
+            }
+        );
+
         subscription_ = this->create_subscription<robot_msgs::msg::MotionCommand>(
             "/motion_command", 10, std::bind(&MainNode::MotionCallback, this, std::placeholders::_1));
         
-        //ball을 잡았는지 안 잡았는지
-        ball_catch_sub = this->create_subscription<robot_msgs::msg::BallResult>(
-            "/ball_result", 10, std::bind(&MainNode::BallCatchCallback, this, std::placeholders::_1));
+        // //ball을 잡았는지 안 잡았는지
+        // ball_catch_sub = this->create_subscription<robot_msgs::msg::BallResult>(
+        //     "/ball_result", 10, std::bind(&MainNode::BallCatchCallback, this, std::placeholders::_1));
 
 
         // 100Hz 루프 타이머 생성 (처음엔 중단 상태)
@@ -86,29 +98,32 @@ private:
     int count1 = 0;
     int count2 = 0;
     int pick_count = 0;
+    int back_count = 0;
     bool pick_mode = false;
     bool shoot_mode = false;
-    bool ball_catch_ = false;
+    bool pick_fail = false;
+
     rclcpp::TimerBase::SharedPtr motion_loop_timer_;       // 반복 제어용 타이머
 
     rclcpp::Publisher<robot_msgs::msg::MotionEnd>::SharedPtr motion_end_pub_;
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr start_pub_;
     rclcpp::TimerBase::SharedPtr start_timer_;
+    rclcpp::TimerBase::SharedPtr motion_start_timer_;
     // motioncommand subscribe
     rclcpp::Subscription<robot_msgs::msg::MotionCommand>::SharedPtr subscription_;
     // ballresult subscribe
-    rclcpp::Subscription<robot_msgs::msg::BallResult>::SharedPtr ball_catch_sub;
+    // rclcpp::Subscription<robot_msgs::msg::BallResult>::SharedPtr ball_catch_sub;
  
     bool out_turn_end = false; // out일때 회전 했는지
 
-    void BallCatchCallback(const robot_msgs::msg::BallResult::SharedPtr ball_msg)
-    {
-        if (ball_msg->ball_catch == true)
-        {
-            ball_catch_ = true;
-            RCLCPP_INFO(this->get_logger(), "ball_catch = true");   
-        }
-    }
+    // void BallCatchCallback(const robot_msgs::msg::BallResult::SharedPtr ball_msg)
+    // {
+    //     if (ball_msg->ball_catch == true)
+    //     {
+    //         ball_catch_ = true;
+    //         RCLCPP_INFO(this->get_logger(), "ball_catch = true");   
+    //     }
+    // }
 
 
     void MotionCallback(const robot_msgs::msg::MotionCommand::SharedPtr msg)        
@@ -148,16 +163,13 @@ private:
 
             case 6: command_ = 6; break;              // FORWARD_HALF
 
-            case 7: command_ = 7; break;              // FORWARD_LEFT
+            case 7: command_ = 7; break;              // Left_half
 
-            case 8: command_ = 8; break;              // FORWARD_RIGHT
+            case 8: command_ = 8; break;              // RIGHT_Half
 
-            case 9: // Pick
-                command_ = 9; 
-                pick_mode = true;
-                break;
+            case 9: command_ = 9;  break;   // pick
 
-            case 10: command_ = 10; break;  // 공 다시 잡기
+            case 10: command_ = 10; pick_mode = true; break;  // 공 다시 잡기
 
             case 11: command_ = 11; break;  // Catch_Finish
 
@@ -179,9 +191,9 @@ private:
                 }
                 command_ = 14; break;  // out일때 우회전 + 1step
 
-            case 15: command_ = 15; break;  // left half
+            case 15: command_ = 15; break;  // left_short
 
-            case 16: command_ = 16; break;  // right half
+            case 16: command_ = 16; break;  // right_short
 
             case 17: //shoot_ready
                 command_ = 17; 
@@ -192,13 +204,17 @@ private:
 
             case 19: command_ = 19; break; //shoot_finish
 
-            case 20: command_ = 20; break; //left_short
+            case 20: command_ = 20; break; //hurdle
 
-            case 21: command_ = 21; break; //right_short
+            case 21: command_ = 21; break; //forward_six
 
-            case 22: command_ = 22; break; //hurdle
+            case 22: command_ = 22; pick_fail = true; break; //pick_fail
 
-            case 30: command_ = 30; break;
+            case 23: command_ = 23; break;
+
+            case 24: command_ = 24; break;
+
+            case 30: command_ = 30; break; //pick
 
         
 
@@ -220,7 +236,7 @@ private:
         // 모션 command 저장
         current_go_ = command_;
 
-        if (current_go_ == 2 || current_go_ == 3 || current_go_ == 13 || current_go_ == 14) {
+        if (current_go_ == 2 || current_go_ == 3 || current_go_ == 13 || current_go_ == 14){
         angle_ = msg->angle;
         callback_->SetLineTurn(true);     // line_turn 키기
         callback_->OnLineResult(angle_);
@@ -301,56 +317,82 @@ private:
             // pick 모션 시퀀스
             if (pick_mode)
             {
-                if (current_go_ == 9){
-                    sleep(3); //공 잡았는지 확인을 위한 대기
-                    if (ball_catch_ == true){
-                        current_go_ = 10; // 공 다시 잡기
-                        RCLCPP_INFO(this->get_logger(), "current_go_ =%d", current_go_);
-                        callback_->ResetMotion();
-                        return;
-                    }
-                    else
-                    {
-                        if (pick_count < 2) //못 잡았을때 최대 3번 pick하기
-                        {
-                            pick_count += 1;
-                            RCLCPP_INFO(this->get_logger(), "공 못 잡음, pick_count = %d", pick_count);                        
-                            return;
-                        }
-                    }
-                }
-
                 if (current_go_ == 10){
                     current_go_ = 11;
                     callback_->ResetMotion();
                     return;
                 }
+
+                if (current_go_ == 11 || back_count < 5){
+                    current_go_ = 5; //back 1 step
+                    back_count += 1;
+                    callback_->ResetMotion();
+                    return;
+                }
                 
                 // 공을 집은 후 제자리에서 회전하는 방법
-                if (current_go_ == 11 || pick_count == 2){
+                if (current_go_ == 5){
                     if(count1 == 0){
-                        current_go_ = 3;
-                        callback_->SetLineTurn(true);
-                        callback_->OnLineResult(30);
-                        callback_->ResetMotion();
-                        RCLCPP_INFO(this->get_logger(), "current_go_ =%d", current_go_);
-                        count1 += 1;   //count로 회전 방향 강제 시키기
-                        pick_count = 0;
-                        return;
-                    }
-                    else if(count1 == 1){
+                        sleep(1);
                         current_go_ = 2;
                         callback_->SetLineTurn(true);
                         callback_->OnLineResult(30);
                         callback_->ResetMotion();
                         RCLCPP_INFO(this->get_logger(), "current_go_ =%d", current_go_);
+                        count1 += 1;   //count로 회전 방향 강제 시키기
+                        return;
+                    }
+                    else if(count1 == 1){
+                        sleep(1);
+                        current_go_ = 3;
+                        callback_->SetLineTurn(true);
+                        callback_->OnLineResult(30);
+                        callback_->ResetMotion();
+                        RCLCPP_INFO(this->get_logger(), "current_go_ =%d", current_go_);
                         count1 = 0;
-                        pick_count = 0;
                         return;
                     }
                 }
                 pick_mode = false;
-                ball_catch_ = false;
+                back_count = 0;
+                // ball_catch_ = false;
+            }
+
+            if (pick_fail)
+            {
+                if (current_go_ == 22 || back_count < 5){
+                    if (current_go_ == 22){
+                        current_go_ = 5; //back 1 step
+                        back_count += 1;
+                        callback_->ResetMotion();
+                        return;
+                    }
+
+                    if (current_go_ == 5){
+                        if(count1 == 0){
+                            sleep(1);
+                            current_go_ = 2;
+                            callback_->SetLineTurn(true);
+                            callback_->OnLineResult(30);
+                            callback_->ResetMotion();
+                            RCLCPP_INFO(this->get_logger(), "current_go_ =%d", current_go_);
+                            count1 += 1;   //count로 회전 방향 강제 시키기
+                            return;
+                        }
+                        else if(count1 == 1){
+                            sleep(1);
+                            current_go_ = 3;
+                            callback_->SetLineTurn(true);
+                            callback_->OnLineResult(30);
+                            callback_->ResetMotion();
+                            RCLCPP_INFO(this->get_logger(), "current_go_ =%d", current_go_);
+                            count1 = 0;
+                            return;
+                        }
+                    }
+                pick_fail = false;
+                back_count = 0;
+                }
             }
 
             // shoot 모션 시퀀스 
@@ -372,15 +414,17 @@ private:
                 // 공을 던진 후 제자리에서 회전하는 방법
                 if (current_go_ == 19){
                     if(count2 == 0){
+                        sleep(1);
                         current_go_ = 3; //우회전
                         callback_->SetLineTurn(true);
-                        callback_->OnLineResult(30);
+                        callback_->OnLineResult(0);
                         callback_->ResetMotion();
                         RCLCPP_INFO(this->get_logger(), "current_go_ =%d", current_go_);
                         count2 += 1;   //count로 회전 방향 강제 시키기
                         return;
                     }
                     else if(count2 == 1){
+                        sleep(1);
                         current_go_ = 2; //좌회전
                         callback_->SetLineTurn(true);
                         callback_->OnLineResult(30);
