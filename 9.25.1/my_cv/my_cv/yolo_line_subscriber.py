@@ -7,8 +7,8 @@ import time
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
-from collections import deque, Counter
-from robot_msgs.msg import LinePoint, LinePointsArray, LineResult, MotionEnd # type: ignore
+from collections import Counter
+from robot_msgs.msg import LinePointsArray, LineResult, MotionEnd # type: ignore
 from rcl_interfaces.msg import SetParametersResult
 
 camera_width = 640
@@ -30,17 +30,18 @@ class LineListenerNode(Node): ##################################################
         self.frame_count = 0
         self.total_time = 0.0
         self.last_report_time = time.time()
-        self.last_avg_text = "AVG: --- ms | FPS: --"
-
         self.line_start_time = None        # 윈도우 시작 시각 (wall-clock)
 
-        self.frames_left = 0       # 남은 프레임 수 < collecting_frames
+        self.last_avg_text = "AVG: --- ms | FPS: --"        
+
         
         self.collecting = False     # 수집 중 여부
         self.armed = False               # motion_end 방어~!
+
         self.window_id = 0
         self.frame_idx = 0      
-
+        self.frames_left = 0       # 남은 프레임 수 < collecting_frames
+        
         self.last_angle = 0
         self.last_line_angle = 0.0
         self.last_delta_zandi = 0.0
@@ -68,11 +69,12 @@ class LineListenerNode(Node): ##################################################
             self.color_image_callback, 10)
         
         # 파라미터 선언
-        self.declare_parameter("delta_zandi_min", 100) # 핑크 라인 두께
+        self.declare_parameter("delta_zandi_min", 100) # 핑크 선 두께
         self.declare_parameter("collecting_frames", 9) # 몇 프레임 동안 보고 판단할 거냐  << yolo는 15프레임, 정지 5프레임, 탐지는 10프레임만
         self.declare_parameter("delta_tip_min", 15) # 빨간 점이 얼마나 벗어나야 커브일까
         self.declare_parameter("vertical", 15) # 직진 판단 각도
         self.declare_parameter("horizontal", 75) # 수평 판단 각도  <<<  아직 안 만듬
+        self.declare_parameter("delta_out", 60) # out 복귀 판단 범위
 
         # 파라미터 적용
         self.delta_zandi_min = self.get_parameter("delta_zandi_min").value
@@ -80,6 +82,7 @@ class LineListenerNode(Node): ##################################################
         self.delta_tip_min = self.get_parameter("delta_tip_min").value
         self.vertical = self.get_parameter("vertical").value
         self.horizontal = self.get_parameter("horizontal").value
+        self.delta_out = self.get_parameter("delta_out").value
         
         self.candidates = [] 
         self.curve_count = 0
@@ -87,7 +90,6 @@ class LineListenerNode(Node): ##################################################
         self.curve_text = "" # 화면 출력
         self.out_text = "" # 화면 출력
 
-        self.delta_out = 40
         self.out_now = False
         self.out_angle = 0
         self.last_mean_angle = 0
@@ -97,33 +99,15 @@ class LineListenerNode(Node): ##################################################
         # 퍼블리셔
         self.line_result_pub = self.create_publisher(LineResult, '/line_result', 10)
 
-    def parameter_callback(self, params):
-        for param in params:
-            if param.name == "delta_zandi_min":
-                if param.value > 0 and param.value < 320:
-                    self.delta_zandi_min = param.value
-                else:
-                    return SetParametersResult(successful=False)
-            if param.name == "collecting_frames":
-                if param.value > 0:
-                    self.collecting_frames = param.value
-                else:
-                    return SetParametersResult(successful=False)
-            if param.name == "delta_tip_min":
-                if param.value > 0:
-                    self.delta_tip_min = param.value
-                else:
-                    return SetParametersResult(successful=False)
-            if param.name == "vertical":
-                if 0 < param.value and param.value < self.horizontal:
-                    self.vertical = param.value
-                else:
-                    return SetParametersResult(successful=False)
-            if param.name == "horizontal":
-                if param.value < 90 and param.value > self.vertical:
-                    self.horizontal = param.value
-                else:
-                    return SetParametersResult(successful=False)
+    def param_callback(self, params):
+        for p in params:
+            if p.name == "delta_zandi_min": self.delta_zandi_min = int(p.value)
+            elif p.name == "collecting_frames": self.collecting_frames = int(p.value)
+            elif p.name == "delta_tip_min": self.delta_tip_min = int(p.value)
+            elif p.name == "vertical": self.vertical = int(p.value)
+            elif p.name == "horizontal": self.horizontal = int(p.value)
+            elif p.name == "delta_out": self.delta_out = int(p.value)
+            
         return SetParametersResult(successful=True)
 
     def motion_callback(self, msg: MotionEnd): # 모션 끝 같이 받아오기 (중복 방지)
@@ -478,9 +462,7 @@ class LineListenerNode(Node): ##################################################
 
         # ROI/잔디 기준 시각화
         cv_image[roi_y_start:roi_y_end, roi_x_start:roi_x_end] = roi
-        cv2.rectangle(cv_image, (roi_x_start - 1, roi_y_start - 1),
-                                (roi_x_end + 1,   roi_y_end),
-                                (0, 255, 0), 1)
+        cv2.rectangle(cv_image, (roi_x_start - 1, roi_y_start - 1), (roi_x_end + 1, roi_y_end), (0, 255, 0), 1)
         cv2.circle(cv_image, (zandi_x, zandi_y), 5, (111,255,111), -1)
         cv2.circle(cv_image, (zandi_x, zandi_y), self.delta_zandi_min, (255,22,255), 1)
         cv2.circle(cv_image, (zandi_x, zandi_y), self.delta_out, (255,22, 22), 1)
