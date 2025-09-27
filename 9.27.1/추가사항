@@ -1,0 +1,6 @@
+1. motion_decision에 허들 내용 임의 추가
+2. command = 10에 고개 들기 추가
+3. shoot_finish에 고개 내리기 추가
+4. pick_fail에 count2 += 1추가
+5. dynamixel.cpp,hpp에 포트 설정 변경(한 포트만 이 아니라 여러포트 순차적으로 하게끔) --> 되는지 확인해봐야함
+6. hurdleResult.msg 추가
