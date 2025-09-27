@@ -1,7 +1,0 @@
-1. shoot, pick 모션 추가
-2. Newpattern에 zsimulation_standup_Shoot_FINISH 추가
-3. pick_mode, shoot_mode 시퀀스 추가
-4. 첫 모션, 마지막 모션 일치 삭제 
-5. motion_decision 방식이 바뀜 --> 라인 볼 허들 이제 각각 하나씩만 받아오고 만약 각각 한개씩 받아왔을때 ResultUnion()에서 판단후 command 보내는 형식
-6. MotionEnd.msg에 pick_end 삭제
-7. ballResult.msg는 res만 보내게 수정
