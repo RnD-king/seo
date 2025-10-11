@@ -1,0 +1,4 @@
+1. decision에 만약 전부 다(공,라인,허들) 놓쳐서 res= 99만 보낼때 다시 인식하게(총 4번까지만 다시)
+2. hurdle_mode 임시 추가
+3. main에 command == 97 추가 (행동 없이 motion_end만)
+4. motion_decision에 결과가 다 99일때 motion_end publish 추가
