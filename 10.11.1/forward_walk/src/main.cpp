@@ -116,22 +116,6 @@ private:
     void MotionCallback(const robot_msgs::msg::MotionCommand::SharedPtr msg)        
     {
         RCLCPP_INFO(this->get_logger(), "command=%d, angle=%d", msg->command,msg->angle);
-
-        if (motion_in_progress_) {
-
-            // if(msg->command == 99){
-            //     RCLCPP_INFO(this->get_logger(), "[STOP] 명령 수신");
-            //     callback_->Set();
-            //     dxl_->MoveToTargetSmoothCos(callback_->All_Theta, 150, 10);
-            //     callback_->ResetMotion();
-            //     RCLCPP_INFO(this->get_logger(), "[MotionEnd] 모션 종료 메시지 전송");
-            //     motion_in_progress_ = false;
-            //     return;
-            // }
-
-            RCLCPP_WARN(this->get_logger(), "동작 중: 명령 무시됨");
-            return;
-        }
         
         int command_ = 0;
         int angle_ = 0;
@@ -208,20 +192,27 @@ private:
             case 27: command_ = 27; break; //forward_2
 
             case 28: command_ = 28; hurdle_mode = true; break; //hurdle_mode (back_half 시작)
+ 
+            case 77: command_ = 77; break; //recovery
 
-            case 77: command_ = 77; break; //Recovery
-
-            // case 99: // STOP (즉시 처리 그대로 유지)
+            case 98: command_ = 98; break; //stop
+            // case 98: // STOP (즉시 처리 그대로 유지)
             //     RCLCPP_INFO(this->get_logger(), "[STOP] 명령 수신");
             //     callback_->Set();
             //     dxl_->MoveToTargetSmoothCos(callback_->All_Theta, 150, 10);
             //     callback_->ResetMotion();
+
             //     RCLCPP_INFO(this->get_logger(), "[MotionEnd] 모션 종료 메시지 전송");
             //     return;
 
             default:
                 RCLCPP_WARN(this->get_logger(), "정의되지 않은 command=%d", msg->command);
                 return;
+        }
+
+        if (motion_in_progress_ == true & current_go_ != 98) {
+            RCLCPP_WARN(this->get_logger(), "동작 중: 명령 무시됨");
+            return;
         }
 
         // 모션 command 저장
@@ -243,6 +234,15 @@ private:
     // 주기적으로 각도 갱신 및 모션 종료 여부 판단
     void MotionLoop()
     {
+        if (current_go_ == 98){
+            RCLCPP_INFO(this->get_logger(), "[STOP] 명령 수신");
+            callback_->Set();
+            dxl_->MoveToTargetSmoothCos(callback_->All_Theta, 150, 10);
+            callback_->ResetMotion();
+            current_go_ = 77;
+            return;
+        }
+
         if (!motion_in_progress_) {
             // RCLCPP_WARN(this->get_logger(), "[MotionLoop] motion_in_progress_ == false");
             return;
@@ -314,15 +314,15 @@ private:
                     return;
                 }
 
-                if (current_go_ == 11 || back_count <= 3){
-                    current_go_ = 5; //back 1 step
-                    back_count += 1;
-                    callback_->ResetMotion();
-                    return;
-                }
+                // if (current_go_ == 11 || back_count <= 3){
+                //     current_go_ = 5; //back 1 step
+                //     back_count += 1;
+                //     callback_->ResetMotion();
+                //     return;
+                // }
                 
                 // 공을 집은 후 제자리에서 회전하는 방법
-                if (current_go_ == 5){
+                if (current_go_ == 11){
                     if(count1 == 0){
                         current_go_ = 3;
                         callback_->SetLineTurn(true);
@@ -355,14 +355,14 @@ private:
 
             if (pick_fail)
             {
-                if (current_go_ == 22 || back_count < 3){
-                    current_go_ = 5; //back 1 step
-                    back_count += 1;
-                    callback_->ResetMotion();
-                    return;
-                }
+                // if (current_go_ == 22 || back_count < 3){
+                //     current_go_ = 5; //back 1 step
+                //     back_count += 1;
+                //     callback_->ResetMotion();
+                //     return;
+                // }
 
-                if (current_go_ == 5){
+                if (current_go_ == 22){
                     if(count1 == 0){
                         current_go_ = 3;
                         callback_->SetLineTurn(true);
