@@ -314,15 +314,15 @@ private:
                     return;
                 }
 
-                // if (current_go_ == 11 || back_count <= 3){
-                //     current_go_ = 5; //back 1 step
-                //     back_count += 1;
-                //     callback_->ResetMotion();
-                //     return;
-                // }
+                if (current_go_ == 11 || back_count <= 3){
+                    current_go_ = 5; //back 1 step
+                    back_count += 1;
+                    callback_->ResetMotion();
+                    return;
+                }
                 
                 // 공을 집은 후 제자리에서 회전하는 방법
-                if (current_go_ == 11){
+                if (current_go_ == 5){
                     if(count1 == 0){
                         current_go_ = 3;
                         callback_->SetLineTurn(true);
@@ -355,14 +355,14 @@ private:
 
             if (pick_fail)
             {
-                // if (current_go_ == 22 || back_count < 3){
-                //     current_go_ = 5; //back 1 step
-                //     back_count += 1;
-                //     callback_->ResetMotion();
-                //     return;
-                // }
+                if (current_go_ == 22 || back_count < 3){
+                    current_go_ = 5; //back 1 step
+                    back_count += 1;
+                    callback_->ResetMotion();
+                    return;
+                }
 
-                if (current_go_ == 22){
+                if (current_go_ == 5){
                     if(count1 == 0){
                         current_go_ = 3;
                         callback_->SetLineTurn(true);
