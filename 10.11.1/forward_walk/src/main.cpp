@@ -368,7 +368,7 @@ private:
                         callback_->SetLineTurn(true);
                         callback_->CalculateTurn(1);
                         result_angle = callback_->GetAngle(); // 계산된 각도 가져오기
-                        result_angle += 11; // 1번 더 강제 추가
+                        result_angle += 33; // 3번 더 강제 추가
                         callback_->OnLineResult(result_angle);
                         callback_->ResetMotion();
                         RCLCPP_INFO(this->get_logger(), "result_angle =%d", result_angle);
@@ -380,7 +380,7 @@ private:
                         callback_->SetLineTurn(true);
                         callback_->CalculateTurn(3);
                         result_angle = callback_->GetAngle(); // 계산된 각도 가져오기
-                        result_angle += 11; // 1번 더 강제 추가
+                        result_angle += 33; // 3번 더 강제 추가
                         callback_->OnLineResult(result_angle);
                         callback_->ResetMotion();
                         RCLCPP_INFO(this->get_logger(), "result_angle =%d", result_angle);
@@ -418,6 +418,7 @@ private:
                         callback_->SetLineTurn(true);
                         callback_->CalculateTurn(2);
                         result_angle = callback_->GetAngle(); // 계산된 각도 가져오기
+                        result_angle += 33; // 3번 더 강제 추가
                         callback_->OnLineResult(result_angle);
                         callback_->ResetMotion();
                         RCLCPP_INFO(this->get_logger(), "current_go_ =%d", current_go_);
@@ -429,6 +430,7 @@ private:
                         callback_->SetLineTurn(true);
                         callback_->CalculateTurn(4);
                         result_angle = callback_->GetAngle(); // 계산된 각도 가져오기
+                        result_angle += 33; // 3번 더 강제 추가
                         callback_->OnLineResult(result_angle);
                         callback_->ResetMotion();
                         RCLCPP_INFO(this->get_logger(), "current_go_ =%d", current_go_);
